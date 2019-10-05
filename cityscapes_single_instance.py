@@ -62,11 +62,11 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         out_dir=""
     ):
         """__init__
-        :param root:
-        :param split:
+        :param root: Location of data
+        :param split: What split of data
         :param is_transform:
         :param img_size:
-        :param augmentations 
+        :param augmentations: Do we or do we not want to perform augmentation
         """
         self.root = root
         self.split = split
@@ -185,17 +185,23 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         return valid_img_paths, labels_coords, img_index_of_label, ins_ids
         
     def _get_instances_coords(self, lbl, ins):
-        instances = np.unique(ins).tolist()
+        """
+        Returns coordinates of bounding boxes of notably-large objects
+        :param lbl: Semantic SegMap
+        :param ins: Instance SegMap
+        :return:
+        """
+        instances = np.unique(ins).tolist()  # Unique pixel values in instance segmap
         instances = [i for i in instances if i != 0]
         
         instances_coords = []
-        for ins_num in instances:
+        for ins_num in instances:  # Iterating over unique pixel values in instance segmap
             x1, x2, y1, y2, ins_bmp = self.get_bbox(ins, ins_num)
             # filter out bbox with extreme sizes and irregular shapes
             area = np.sum(ins_bmp)
-            if (area >= 100):
+            if (area >= 100):  # If the object is large enough to be "significant"
                 instances_coords += [([x1, x2, y1, y2], ins_num)]
-#             occupy_ratio = np.sum(ins_bmp) / ((x2 - x1) * (y2 - y1))
+#               occupy_ratio = np.sum(ins_bmp) / ((x2 - x1) * (y2 - y1))
             
 #             if (x2 - x1 >= 50 and y2 - y1 >= 50) and (x2 - x1 <= 1000 and y2 - y1 <= 1000) \
 #                and occupy_ratio > 0.25:
@@ -237,7 +243,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         ins[ins != self.ins_ids[index]] = 0
         ins[ins == self.ins_ids[index]] = 1
         
-        img, ins = self.crop_bbox(img, ins, bbox, random_crop = self.split=='train')
+        img, ins = self.crop_bbox(img, ins, bbox, random_crop=(self.split=='train'))
         
         img = Image.fromarray(img)
         ins = Image.fromarray(ins)
@@ -278,6 +284,12 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         return mask
     
     def encode_insmap(self, ins, lbl):
+        """
+
+        :param ins:
+        :param lbl:
+        :return:
+        """
         ins += 1
         ins[lbl == self.ignore_index] = 0
         instances = [i for i in np.sort(np.unique(ins)) if i != 0]
@@ -314,6 +326,12 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         return img_out.astype(np.uint8), lbl_out.astype(np.uint8)
     
     def get_bbox(self, ins, ins_id):
+        """
+        Returns coordinates of bounding box around object
+        :param ins:
+        :param ins_id:
+        :return: Returns coords
+        """
         # get instance bitmap
         ins_bmp = np.zeros_like(ins)
         ins_bmp[ins == ins_id] = 1

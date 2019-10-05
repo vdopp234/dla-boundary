@@ -22,7 +22,7 @@ from tensorboardX import SummaryWriter
 
 import dla_up
 import data_transforms as transforms
-import dataset
+import dataset  # ImageNet dataset
 from cityscapes_single_instance import CityscapesSingleInstanceDataset
 from augmentation import Normalize
 
@@ -113,6 +113,10 @@ class SegList(torch.utils.data.Dataset):
 
 
 class SegListMS(torch.utils.data.Dataset):
+    """
+    Same dataset as SegList, but applies transforms to multiple
+    scaled copies of linearly interpolated (bilinear) data.
+    """
     def __init__(self, data_dir, phase, transforms, scales, list_dir=None):
         self.list_dir = data_dir if list_dir is None else list_dir
         self.data_dir = data_dir
@@ -156,6 +160,17 @@ class SegListMS(torch.utils.data.Dataset):
 
 
 def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print_freq=10):
+    """
+    Computes validation metrics
+    :param val_loader: Validation dataset
+    :param model:
+    :param criterion:
+    :param epoch:
+    :param writer:
+    :param eval_score:
+    :param print_freq:
+    :return:
+    """
     batch_time = AverageMeter()
     losses = AverageMeter()
     score = AverageMeter()
@@ -331,6 +346,13 @@ def save_checkpoint(state, is_best, out_dir, filename='checkpoint.pth.tar'):
 
 
 def train_seg(args, writer):
+    """
+    Full training loop for segmentation model, using (hyper)params set in commandline
+    :param args: Dictionary of commandline params
+    :param writer: File writer to write train/val results
+    :return:
+    """
+
     batch_size = args.batch_size
     num_workers = args.workers
     crop_size = args.crop_size
@@ -357,6 +379,7 @@ def train_seg(args, writer):
     info = dataset.load_dataset_info(data_dir)
     normalize = transforms.Normalize(mean=info.mean, std=info.std)
     t = []
+    # Create array of transforms based on arguments passed in during terminal call
     if args.random_rotate > 0:
         t.append(transforms.RandomRotate(args.random_rotate))
     if args.random_scale > 0:
@@ -380,7 +403,7 @@ def train_seg(args, writer):
     optimizer = torch.optim.SGD(single_model.optim_parameters(),
                                 args.lr,
                                 momentum=args.momentum,
-                                weight_decay=args.weight_decay)
+                                weight_decay=args.weight_decay)  # Adam?
     cudnn.benchmark = True
     best_prec1 = 0
     start_epoch = 0
@@ -430,7 +453,7 @@ def train_seg(args, writer):
 
 def adjust_learning_rate(args, optimizer, epoch):
     """Sets the learning rate to the initial LR decayed by 10
-    every 30 epochs"""
+    every 30 epochs"""  # Seems a bit steep, might want to adjust
     if args.lr_mode == 'step':
         lr = args.lr * (0.1 ** (epoch // args.step))
     elif args.lr_mode == 'poly':
@@ -656,11 +679,11 @@ def test_seg(args, writer):
         batch_size=batch_size, shuffle=False, num_workers=num_workers,
         pin_memory=False
     )
-    test_loader = torch.utils.data.DataLoader(
-        data,
-        batch_size=batch_size, shuffle=False, num_workers=num_workers,
-        pin_memory=False
-    )
+    # test_loader = torch.utils.data.DataLoader(
+    #     data,
+    #     batch_size=batch_size, shuffle=False, num_workers=num_workers,
+    #     pin_memory=False
+    # )
 
     cudnn.benchmark = True
 
