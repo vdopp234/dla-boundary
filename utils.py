@@ -51,7 +51,9 @@ def reg_scalor(grad_yx):
 
 def get_boundary_map(segmap):
     bitmap = np.zeros_like(segmap)
-    im2, contours, hierarchy = cv2.findContours(np.asarray(segmap), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    # VD: Update code for cv2 version >= 4.0. Method now mutates input array, doesn't return a copy of it
+    im2 = segmap.copy()
+    contours, hierarchy = cv2.findContours(im2, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     bitmap = cv2.drawContours(bitmap, contours, -1, 1, 1) * 255
     return Image.fromarray(np.uint8(bitmap))
 
