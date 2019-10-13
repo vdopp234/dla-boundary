@@ -3,7 +3,7 @@ import os
 import json
 import torch
 import numpy as np
-import scipy.misc as m
+from imageio import imsave, imread
 
 from torch.utils import data
 import torchvision.transforms.functional as tf
@@ -75,12 +75,13 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         self.train_transform = train_transform
         self.scale_transform = scale_transform
         
-        self.n_classes = 8 #19
+        self.n_classes = 8  # 19
         self.img_size = (
             img_size if isinstance(img_size, tuple) else (img_size, img_size)
         )
         
         self.images_base = os.path.join(self.root, "leftImg8bit", self.split)
+        # self.images_base = os.path.join(self.root, self.split)
         self.annotations_base = os.path.join(
             self.root, "gtFine", self.split
         )
@@ -122,10 +123,12 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         self.ignore_index = 250
         self.class_map = dict(zip(self.valid_classes, range(8)))
 
+        # print("Example image: ", img_paths[4], "NumImgs: ", len(img_paths))  # TODO: Delete this comment
+
         self.img_paths, self.labels_coords, self.img_index_of_label, self.ins_ids = self._prepare_labels(img_paths, out_dir)
         
         if not self.img_paths:
-            raise Exception(
+            raise FileExistsError(
                 "No files for split=[%s] found in %s" % (split, self.images_base)
             )
 
@@ -138,7 +141,9 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         return info
         
     def _prepare_labels(self, img_paths, out_dir):
-        json_path = '{}/{}_cityscapes_single_instance_info.json'.format(out_dir, self.split)
+        json_path = "./model_outputs/train_cityscapes_single_instance_info.json"
+        # json_path = '{}/{}_cityscapes_single_instance_info.json'.format(out_dir, self.split)
+        print("Save Path for JSON: ", json_path)
         if not os.path.exists(json_path):
             print("No bbox info found. Preparing labels might take some time.")
             labels_coords = []
@@ -159,10 +164,10 @@ class CityscapesSingleInstanceDataset(data.Dataset):
                     os.path.basename(img_path)[:-15] + "gtFine_instanceIds.png",
                 )
 
-                lbl = m.imread(lbl_path)
+                lbl = imread(lbl_path)
                 lbl = self.encode_segmap(np.array(lbl, dtype=np.uint8))
 
-                ins = m.imread(ins_path)
+                ins = imread(ins_path)
                 ins = self.encode_insmap(np.array(ins, dtype=np.uint16), lbl)
 
                 instances_coords = self._get_instances_coords(lbl, ins)
@@ -171,6 +176,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
                     labels_coords += [i[0] for i in instances_coords]
                     img_index_of_label += [len(valid_img_paths) - 1] * len(instances_coords)
                     ins_ids += [i[1] for i in instances_coords]
+
             with open(json_path, 'w') as f:
                 json.dump({'valid_img_paths': valid_img_paths, 'labels_coords': labels_coords, 'img_index_of_label': img_index_of_label, 'ins_ids': ins_ids}, f)
                 print('Saved bboxes to local.')
@@ -219,7 +225,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         """
         img_path = self.img_paths[self.img_index_of_label[index]]
         
-        img = m.imread(img_path)
+        img = imread(img_path)
         img = np.array(img, dtype=np.uint8)
 
         lbl_path = os.path.join(
@@ -233,10 +239,10 @@ class CityscapesSingleInstanceDataset(data.Dataset):
             os.path.basename(img_path)[:-15] + "gtFine_instanceIds.png",
         )
 
-        lbl = m.imread(lbl_path)
+        lbl = imread(lbl_path)
         lbl = self.encode_segmap(np.array(lbl, dtype=np.uint8))
 
-        ins = m.imread(ins_path)
+        ins = imread(ins_path)
         ins = self.encode_insmap(np.array(ins, dtype=np.uint16), lbl)
         
         bbox = self.labels_coords[index]

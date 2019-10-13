@@ -34,8 +34,14 @@ def get_data(data_name):
 
 
 def load_dataset_info(data_dir, data_name='new_data'):
+    """
+
+    :param data_dir:
+    :param data_name:
+    :return:
+    """
     info_path = join(data_dir, 'info.json')
-    if not exists(info_path):
+    if not exists(info_path):  # If there is no datainfo json, returns none
         return None
     info = json.load(open(info_path, 'r'))
     assert 'mean' in info and 'std' in info, \
@@ -43,7 +49,7 @@ def load_dataset_info(data_dir, data_name='new_data'):
     data = Dataset(name=data_name, classes=0,
                    mean=None,
                    std=None,
-                   eigval=None,
+                   eigval=None,  # What are eigval, eigvec for?
                    eigvec=None,
                    model_hash=dict())
     return data._replace(**info)

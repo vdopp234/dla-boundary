@@ -22,7 +22,7 @@ from tensorboardX import SummaryWriter
 
 import dla_up
 import data_transforms as transforms
-import dataset  # ImageNet dataset
+import dataset  # Import contains ImageNet dataloader, amongst other functions
 from cityscapes_single_instance import CityscapesSingleInstanceDataset
 from augmentation import Normalize
 
@@ -390,6 +390,9 @@ def train_seg(args, writer):
     t.extend([transforms.RandomHorizontalFlip(),
               transforms.ToTensor(),
               normalize])
+
+    # print("Args Out Dir: ", args.out_dir)  # TODO: Delete this debugging print
+
     train_loader = torch.utils.data.DataLoader(
         CityscapesSingleInstanceDataset(data_dir, 'train', out_dir=args.out_dir),
         batch_size=batch_size, shuffle=True, num_workers=num_workers,
