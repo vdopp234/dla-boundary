@@ -259,7 +259,8 @@ def accuracy(output, target):
     correct = correct[target != 255]
     correct = correct.view(-1)
     score = correct.float().sum(0).mul(100.0 / correct.size(0))
-    return score.data[0]
+    return score.data.item()
+    # return score.data[0]
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer,
@@ -304,7 +305,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.data[0], input.size(0))
+        losses.update(loss.data.item(), input.size(0))
         if eval_score is not None:
             scores.update(eval_score(output, target_var), input.size(0))
 
@@ -326,6 +327,8 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
             prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
             prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
 
+            # writer.add_image('train/gt', target.cpu().numpy(), step)
+            print("Target Shape: ", target.shape)
             writer.add_image('train/gt', target[0].cpu().numpy(), step)
             writer.add_image('train/predicted', prediction[0], step)
             writer.add_image('train/prob', prob[0][1], step)
