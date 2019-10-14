@@ -305,7 +305,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
         print("Output Shape: ", output.shape)
         loss = criterion(output, target_var)
         print("Loss Shape: ", loss.shape)
-        
+
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
         losses.update(loss.data.item(), input.size(0))
