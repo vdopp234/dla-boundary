@@ -220,7 +220,9 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         return len(self.labels_coords)
 
     def __getitem__(self, index):
-        """__getitem__
+        """
+        Returns the training image, label which dataloader iterates through
+        __getitem__
         :param index:
         """
         img_path = self.img_paths[self.img_index_of_label[index]]
