@@ -330,11 +330,12 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
             prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
             prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
 
-            # writer.add_image('train/gt', target.cpu().numpy(), step)
-            print("Target Shape: ", target.shape)
-            writer.add_image('train/gt', target[0].cpu().numpy(), step)
-            writer.add_image('train/predicted', prediction[0], step)
-            writer.add_image('train/prob', prob[0][1], step)
+            # writer.add_image('train/gt', target[0].cpu().numpy(), step)
+            # print("Target Shape: ", target.shape)
+            # Expand Dims for compatibility with tensorboardX
+            writer.add_image('train/gt', np.expand_dims(target[0].cpu().numpy(), axis=0), step)
+            writer.add_image('train/predicted', np.expand_dims(prediction[0], axis=0), step)
+            writer.add_image('train/prob', np.expand_dims(prob[0][1], axis=0), step)
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
