@@ -359,6 +359,7 @@ def train_seg(args, writer):
     """
     Full training loop for segmentation model, using (hyper)params set in commandline
     :param args: Dictionary of commandline params
+        -If you want to resume from checkpoint, set args.resume = <checkpoint_path>
     :param writer: File writer to write train/val results
     :return:
     """
@@ -450,7 +451,8 @@ def train_seg(args, writer):
 
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
-        checkpoint_path = 'checkpoint_latest.pth.tar'
+        checkpoint_path = './checkpoints/checkpoint_latest.pth'
+        # checkpoint_path = './checkpoints/checkpoint_latest.pth.tar'
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': args.arch,
