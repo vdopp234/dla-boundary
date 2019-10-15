@@ -27,7 +27,7 @@ from cityscapes_single_instance import CityscapesSingleInstanceDataset
 from augmentation import Normalize
 
 import wandb
-wandb.init(sync_tensorboard=True)
+wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
 
 try:
     from modules import batchnormsync
@@ -303,11 +303,8 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
         target_var = torch.autograd.Variable(target)
         
         # compute output
-        print("Input Shape: ", input.shape)
         output = model(input_var)[0]
-        print("Output Shape: ", output.shape)
         loss = criterion(output, target_var)
-        print("Loss Shape: ", loss.shape)
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
@@ -402,7 +399,6 @@ def train_seg(args, writer):
               transforms.ToTensor(),
               normalize])
 
-    # print("Args Out Dir: ", args.out_dir)  # TODO: Delete this debugging print
 
     train_loader = torch.utils.data.DataLoader(
         CityscapesSingleInstanceDataset(data_dir, 'train', out_dir=args.out_dir),
