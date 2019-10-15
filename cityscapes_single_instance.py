@@ -264,7 +264,9 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         # ins = np.expand_dims(ins, axis=2)  # Add dimension for channel, converted to CHW in tf.to_tensor()
         
         img = tf.to_tensor(img).float()
-        ins = tf.to_tensor(ins).long()
+        ins = tf.to_tensor(ins).long().squeeze(0)
+        # print("Ins Shape: ", ins.shape)
+        # print("Input Shapes: ", img.shape, ins.shape)
         return img, ins, bbox
     
 
