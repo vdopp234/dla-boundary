@@ -26,6 +26,9 @@ import dataset  # Import contains ImageNet dataloader, amongst other functions
 from cityscapes_single_instance import CityscapesSingleInstanceDataset
 from augmentation import Normalize
 
+import wandb
+wandb.init(sync_tensorboard=True)
+
 try:
     from modules import batchnormsync
     HAS_BN_SYNC = True
