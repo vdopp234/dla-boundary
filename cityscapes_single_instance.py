@@ -141,7 +141,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         return info
         
     def _prepare_labels(self, img_paths, out_dir):
-        json_path = "./model_outputs/{}_cityscapes_single__instance_info.json".format(self.split)
+        json_path = "./model_outputs/{}_cityscapes_single_instance_info.json".format(self.split)
         # json_path = "./model_outputs/train_cityscapes_single_instance_info.json"
         # json_path = '{}/{}_cityscapes_single_instance_info.json'.format(out_dir, self.split)
         print("Save Path for JSON: ", json_path)
