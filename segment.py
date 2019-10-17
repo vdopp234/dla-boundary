@@ -202,7 +202,8 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.data[0], input.size(0))
+        # losses.update(loss.data[0], input.size(0))
+        losses.update(loss.data.item())
         if eval_score is not None:
             score.update(eval_score(output, target_var), input.size(0))
 
@@ -218,9 +219,9 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
             prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
             prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
 
-            writer.add_image('validate/gt', target[0].cpu().numpy(), step)
-            writer.add_image('validate/predicted', prediction[0], step)
-            writer.add_image('validate/prob', prob[0][1], step)
+            writer.add_image('validate/gt', np.expand_dims(target[0].cpu().numpy(), axis=0), step)
+            writer.add_image('validate/predicted', np.expand_dims(prediction[0], axis=0), step)
+            writer.add_image('validate/prob', np.expand_dims(prob[0][1], axis=0), step)
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
