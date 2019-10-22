@@ -193,41 +193,42 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
 
         input = input.cuda()
         target = target.cuda(non_blocking=True)
-        input_var = torch.autograd.Variable(input, volatile=True)
-        target_var = torch.autograd.Variable(target, volatile=True)
+        with torch.no_grad():
+            input_var = torch.autograd.Variable(input)
+            target_var = torch.autograd.Variable(target)
 
-        # compute output
-        output = model(input_var)[0]
-        loss = criterion(output, target_var)
+            # compute output
+            output = model(input_var)[0]
+            loss = criterion(output, target_var)
 
-        # measure accuracy and record loss
-        # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        # losses.update(loss.data[0], input.size(0))
-        losses.update(loss.data.item())
-        if eval_score is not None:
-            score.update(eval_score(output, target_var), input.size(0))
+            # measure accuracy and record loss
+            # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+            # losses.update(loss.data[0], input.size(0))
+            losses.update(loss.data.item())
+            if eval_score is not None:
+                score.update(eval_score(output, target_var), input.size(0))
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
 
-        if i % print_freq == 0:
-            writer.add_scalar('validate/loss', losses.avg, step)
-            writer.add_scalar('validate/score_avg', score.avg, step)
-            writer.add_scalar('validate/score', score.val, step)
-            
-            prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
-            prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
+            if i % print_freq == 0:
+                writer.add_scalar('validate/loss', losses.avg, step)
+                writer.add_scalar('validate/score_avg', score.avg, step)
+                writer.add_scalar('validate/score', score.val, step)
 
-            writer.add_image('validate/gt', np.expand_dims(target[0].cpu().numpy(), axis=0), step)
-            writer.add_image('validate/predicted', np.expand_dims(prediction[0], axis=0), step)
-            writer.add_image('validate/prob', np.expand_dims(prob[0][1], axis=0), step)
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Score {score.val:.3f} ({score.avg:.3f})'.format(
-                    i, len(val_loader), batch_time=batch_time, loss=losses,
-                    score=score), flush=True)
+                prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
+                prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
+
+                writer.add_image('validate/gt', np.expand_dims(target[0].cpu().numpy(), axis=0), step)
+                writer.add_image('validate/predicted', np.expand_dims(prediction[0], axis=0), step)
+                writer.add_image('validate/prob', np.expand_dims(prob[0][1], axis=0), step)
+                print('Test: [{0}/{1}]\t'
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                      'Score {score.val:.3f} ({score.avg:.3f})'.format(
+                        i, len(val_loader), batch_time=batch_time, loss=losses,
+                        score=score), flush=True)
 
     print(' * Score {top1.avg:.3f}'.format(top1=score))
 
