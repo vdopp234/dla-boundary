@@ -347,7 +347,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
 
 
 def save_checkpoint(state, is_best, out_dir, filename='checkpoint.pth.tar'):
-    filename = os.path.join(out_dir, filename)
+    filename = os.path.join("model_outputs", filename)  # Change to out_dir if error
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
