@@ -3,7 +3,7 @@ import os
 import json
 import torch
 import numpy as np
-from imageio import imsave, imread
+from imageio import imwrite, imread
 
 from torch.utils import data
 import torchvision.transforms.functional as tf
@@ -252,7 +252,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         ins[ins != self.ins_ids[index]] = 0
         ins[ins == self.ins_ids[index]] = 1
         
-        img, ins = self.crop_bbox(img, ins, bbox, random_crop=(self.split=='train'))
+        img, ins = self.crop_bbox(img, ins, bbox, random_crop=(self.split=='train'), save_tag=img_path[:len(img_path) - 4])  # Ignore file extension
         
         img = Image.fromarray(img)
         ins = Image.fromarray(ins)
@@ -309,7 +309,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
             ins[ins == instances[i]] = i + 1
         return ins.astype(np.uint8)
     
-    def crop_bbox(self, img, lbl, bbox, context_lo=0.1, context_hi=0.2, random_crop=True):
+    def crop_bbox(self, img, lbl, bbox, context_lo=0.1, context_hi=0.2, random_crop=True, save_tag=None):
         # assumes imgs have the same size in the first two dimensions
         H, W, _ = img.shape
         x1, x2, y1, y2 = bbox
@@ -333,7 +333,13 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         lbl_out = np.zeros((patch_w, patch_w))
         
         img_out[:y2-y1, :x2-x1, :] = img[y1:y2,x1:x2,:]
-        lbl_out[:y2-y1, :x2-x1] = lbl[y1:y2,x1:x2] 
+        lbl_out[:y2-y1, :x2-x1] = lbl[y1:y2,x1:x2]
+
+        # Visualization Code
+        if save_tag is not None:
+            imwrite("./visualization_crops/{}_gt.png".format(save_tag), img_out)
+            imwrite("./visualization_crops/{}_pred.png".format(save_tag), lbl_out)
+        # End Visualization Code
         return img_out.astype(np.uint8), lbl_out.astype(np.uint8)
     
     def get_bbox(self, ins, ins_id):
