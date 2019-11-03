@@ -3,6 +3,10 @@ import json
 import logging
 from datetime import datetime
 import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = '7'
+print("CUDA_VISIBLE_DEVICES = ", os.environ['CUDA_VISIBLE_DEVICES'])
+
 import threading
 from os.path import exists, join, split, dirname
 
