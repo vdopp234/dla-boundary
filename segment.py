@@ -673,7 +673,7 @@ def test_ms(eval_data_loader, model, num_classes, scales,
 
 def test_boundary(eval_data_loader, model, num_classes, scales,
                 output_dir='pred', has_gt=True, save_vis=False):
-    # Computes
+    # Computes boundary ODS/OIS F-Score, Precision, Recall
     model.eval()
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -781,7 +781,12 @@ def test_seg(args, writer):
         out_dir += '_ms'
 
     if args.ms:
-        mAP = test_ms(test_loader, model, args.classes, save_vis=True,
+        mAP = test_ms(test_loader, model, args.classes, save_vis=False,
+                      has_gt=phase != 'test' or args.with_gt,
+                      output_dir=out_dir,
+                      scales=scales)
+    elif args.bnd:
+        mAP = test_boundary(test_loader, model, args.classes, save_vis=False,
                       has_gt=phase != 'test' or args.with_gt,
                       output_dir=out_dir,
                       scales=scales)
@@ -845,6 +850,7 @@ def parse_args():
     parser.add_argument('--random-color', action='store_true', default=False)
     parser.add_argument('--save-freq', default=10, type=int)
     parser.add_argument('--ms', action='store_true', default=False)
+    parser.add_argument('--bnd', action='store_true', default=False)  # Use if doing boundary evaluation
     parser.add_argument('--edge-weight', type=int, default=-1)
     parser.add_argument('--test-suffix', default='')
     parser.add_argument('--with-gt', action='store_true')
