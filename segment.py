@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '7'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 print("CUDA_VISIBLE_DEVICES = ", os.environ['CUDA_VISIBLE_DEVICES'])
 
 import threading
@@ -30,8 +30,8 @@ import dataset  # Import contains ImageNet dataloader, amongst other functions
 from cityscapes_single_instance import CityscapesSingleInstanceDataset
 from augmentation import Normalize
 
-import wandb
-wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
+# import wandb
+# wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
 
 try:
     from modules import batchnormsync
@@ -697,6 +697,8 @@ def test_boundary(eval_data_loader, model, num_classes, scales,
                     image_var = Variable(image, requires_grad=False, volatile=True)
                     final = model(image_var)[0]
                     outputs.append(final.data)
+        print(outputs[0].shape)
+        raise SystemExit
         final = sum([resize_4d_tensor(out, w, h) for out in outputs])
         pred = final.argmax(axis=1)
         batch_time.update(time.time() - end)
