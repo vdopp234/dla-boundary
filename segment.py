@@ -485,11 +485,12 @@ def adjust_learning_rate(args, optimizer, epoch):
 
 def fast_hist(pred, label, n):
     k = (label >= 0) & (label < n)
-    return np.bincount(
+    return np.bincount(  # Method computes the number of occurences for each non-negative int, corresponds to each class
         n * label[k].astype(int) + pred[k], minlength=n ** 2).reshape(n, n)
 
 
 def per_class_iu(hist):
+    # Is this IOU Score?
     return np.diag(hist) / (hist.sum(1) + hist.sum(0) - np.diag(hist))
 
 
@@ -593,6 +594,7 @@ def test(eval_data_loader, model, num_classes,
 
 
 def resize_4d_tensor(tensor, width, height):
+    ## Goes from width-height to height-width
     tensor_cpu = tensor.cpu().numpy()
     if tensor.size(2) == height and tensor.size(3) == width:
         return tensor_cpu
@@ -621,6 +623,7 @@ def resize_4d_tensor(tensor, width, height):
 
 def test_ms(eval_data_loader, model, num_classes, scales,
             output_dir='pred', has_gt=True, save_vis=False):
+    # Computes
     model.eval()
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -639,9 +642,11 @@ def test_ms(eval_data_loader, model, num_classes, scales,
         images.extend(input_data[-num_scales:])
         outputs = []
         for image in images:
-            image_var = Variable(image, requires_grad=False, volatile=True)
-            final = model(image_var)[0]
-            outputs.append(final.data)
+            with torch.no_grad():
+                if len(image.shape) != 3:
+                    image_var = Variable(image, requires_grad=False, volatile=True)
+                    final = model(image_var)[0]
+                    outputs.append(final.data)
         final = sum([resize_4d_tensor(out, w, h) for out in outputs])
         pred = final.argmax(axis=1)
         batch_time.update(time.time() - end)
@@ -666,7 +671,54 @@ def test_ms(eval_data_loader, model, num_classes, scales,
         return round(np.nanmean(ious), 2)
 
 
+def test_boundary(eval_data_loader, model, num_classes, scales,
+                output_dir='pred', has_gt=True, save_vis=False):
+    # Computes
+    model.eval()
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    end = time.time()
+    hist = np.zeros((num_classes, num_classes))
+    num_scales = len(scales)
+    for iter, input_data in enumerate(eval_data_loader):
+        data_time.update(time.time() - end)
+        if has_gt:
+            name = input_data[2]
+            label = input_data[1]
+        else:
+            name = input_data[1]
+        h, w = input_data[0].size()[2:4]
+        images = [input_data[0]]
+        images.extend(input_data[-num_scales:])
+        outputs = []
+        for image in images:
+            with torch.no_grad():
+                if type(image) == torch.Tensor and len(image.shape) != 3:
+                    image_var = Variable(image, requires_grad=False, volatile=True)
+                    final = model(image_var)[0]
+                    outputs.append(final.data)
+        final = sum([resize_4d_tensor(out, w, h) for out in outputs])
+        pred = final.argmax(axis=1)
+        batch_time.update(time.time() - end)
+        if has_gt:
+            label = label.numpy()
+            hist += fast_hist(pred.flatten(), label.flatten(), num_classes)
+            logger.info('===> mAP {mAP:.3f}'.format(
+                mAP=round(np.nanmean(per_class_iu(hist)) * 100, 2)))
+        end = time.time()
+        logger.info('Eval: [{0}/{1}]\t'
+                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                    'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                    .format(iter, len(eval_data_loader), batch_time=batch_time,
+                            data_time=data_time))
+    if has_gt:  # val
+        ious = per_class_iu(hist) * 100
+        logger.info(' '.join('{:.03f}'.format(i) for i in ious))
+        return round(np.nanmean(ious), 2)
+
+
 def test_seg(args, writer):
+    print("MS: ", args.ms)
     batch_size = args.batch_size
     num_workers = args.workers
     phase = args.phase
@@ -691,6 +743,7 @@ def test_seg(args, writer):
     t.extend([transforms.RandomHorizontalFlip(),
               transforms.ToTensor(),
               normalize])
+    # Is there any reason for transforms in validation code?
     test_loader = torch.utils.data.DataLoader(
         CityscapesSingleInstanceDataset(data_dir, 'val', out_dir=args.out_dir),
         batch_size=batch_size, shuffle=False, num_workers=num_workers,
