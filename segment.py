@@ -278,6 +278,18 @@ def accuracy(output, target):
 
 def train(train_loader, model, criterion, optimizer, epoch, writer,
           eval_score=None, print_freq=10):
+    """
+    Trains model for one epoch
+    :param train_loader: Train Dataset Dataloader
+    :param model: DLA_Up Model
+    :param criterion: NLLLoss2D
+    :param optimizer:
+    :param epoch:
+    :param writer:
+    :param eval_score:
+    :param print_freq:
+    :return:
+    """
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -314,6 +326,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
         
         # compute output
         output = model(input_var)[0]
+        print("Train Output/Target Shapes: ", output.shape, target.shape)
         loss = criterion(output, target_var)
 
         # measure accuracy and record loss
