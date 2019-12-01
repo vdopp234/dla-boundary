@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '5'
+os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 print("CUDA_VISIBLE_DEVICES = ", os.environ['CUDA_VISIBLE_DEVICES'])
 
 import threading
@@ -326,7 +326,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
         
         # compute output
         output = model(input_var)[0]
-        print("Train Output/Target Shapes: ", output.shape, target.shape)
+        # print("Train Output/Target Shapes: ", output.shape, target.shape)
         loss = criterion(output, target_var)
 
         # measure accuracy and record loss
