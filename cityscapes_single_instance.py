@@ -4,6 +4,7 @@ import json
 import torch
 import numpy as np
 from imageio import imwrite, imread
+import random
 
 from torch.utils import data
 import torchvision.transforms.functional as tf
@@ -141,9 +142,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         return info
         
     def _prepare_labels(self, img_paths, out_dir):
-        json_path = "./model_outputs/{}_cityscapes_single__instance_info.json".format(self.split)
-        # json_path = "./model_outputs/train_cityscapes_single_instance_info.json"
-        # json_path = '{}/{}_cityscapes_single_instance_info.json'.format(out_dir, self.split)
+        json_path = "./model_outputs/{}_cityscapes_single_instance_info.json".format(self.split)
         print("Save Path for JSON: ", json_path)
         if not os.path.exists(json_path):
             print("No bbox info found. Preparing labels might take some time.")
@@ -337,8 +336,10 @@ class CityscapesSingleInstanceDataset(data.Dataset):
 
         # Visualization Code
         if save_tag is not None:
-            imwrite("./visualization_crops/{}_gt.png".format(save_tag), img_out)
-            imwrite("./visualization_crops/{}_pred.png".format(save_tag), lbl_out)
+            if random.random() < 1e-3:  # Only save small fraction of images
+                x = save_tag.split('/')[len(save_tag) - 1]
+                imwrite("./visualization_crops/{}_gt.png".format(x), img_out)
+                imwrite("./visualization_crops/{}_pred.png".format(x), lbl_out)
         # End Visualization Code
         return img_out.astype(np.uint8), lbl_out.astype(np.uint8)
     
