@@ -608,20 +608,24 @@ def test_boundary(eval_data_loader, model, num_classes,
         data_time.update(time.time() - end)
         image_var = Variable(image, requires_grad=False, volatile=True)
         final = model(image_var)[0]
-        _, pred = torch.max(final, 1)
+        # print("Final Shape: ", final.shape)
+        _, pred = torch.max(final, 1)  # Returns argmax
         pred = pred.cpu().data.numpy()
         print(np.min(pred), np.max(pred))
         batch_time.update(time.time() - end)
         prob = torch.exp(final)
+        # print("Prob min/max: ", torch.min(prob), torch.max(prob))
         if has_gt:
             label = label.numpy()  # Label is a Boundary Map!
             boundary_score = 0
             batch_size = 16
-            print(label.size, pred.size)
+            # print(label.shape, pred.shape)
             for i in range(batch_size):
                 single_pred = pred[i]
                 single_label = label[i]
-                boundary_score += db_eval_boundary(single_pred[:, :, 0], single_label[:, :, 0], bound_th=1)[0]
+                imwrite("gt_outputs/gt_img{}.png".format(i), single_label.astype(np.uint8)*255)
+                imwrite("pred_outputs/pred_img{}.png".format(i), single_pred.astype(np.uint8)*255)
+                boundary_score += db_eval_boundary(single_pred, single_label, bound_th=1)[0]
             average_boundary_score = boundary_score/batch_size
             print('===> mAP {mAP:.3f}'.format(mAP=average_boundary_score))
         end = time.time()
