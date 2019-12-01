@@ -597,14 +597,14 @@ def test(eval_data_loader, model, num_classes,
         return round(np.nanmean(ious), 2)
 
 
-def test_bnd(eval_data_loader, model, num_classes,
+def test_boundary(eval_data_loader, model, num_classes,
          output_dir='pred', has_gt=True, save_vis=False):
     model.eval()
     batch_time = AverageMeter()
     data_time = AverageMeter()
     end = time.time()
     # hist = np.zeros((num_classes, num_classes))
-    for iter, (image, label, name, size) in enumerate(eval_data_loader):
+    for iter, (image, label, _) in enumerate(eval_data_loader):
         data_time.update(time.time() - end)
         image_var = Variable(image, requires_grad=False, volatile=True)
         final = model(image_var)[0]
@@ -613,14 +613,6 @@ def test_bnd(eval_data_loader, model, num_classes,
         print(np.min(pred), np.max(pred))
         batch_time.update(time.time() - end)
         prob = torch.exp(final)
-        if save_vis:
-            out_size = eval_data_loader.dataset.img_size
-            save_output_images(pred, name, output_dir, size, out_size)
-            if prob.size(1) == 2:
-                save_prob_images(prob, name, output_dir + '_prob', size, out_size)
-            else:
-                save_colorful_images(pred, name, output_dir + '_color',
-                                     CITYSCAPE_PALLETE)
         if has_gt:
             label = label.numpy()  # Label is a Boundary Map!
             boundary_score = 0
