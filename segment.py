@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '5'
 print("CUDA_VISIBLE_DEVICES = ", os.environ['CUDA_VISIBLE_DEVICES'])
 
 import threading
@@ -617,6 +617,7 @@ def test_boundary(eval_data_loader, model, num_classes,
             label = label.numpy()  # Label is a Boundary Map!
             boundary_score = 0
             batch_size = 16
+            print(label.size, pred.size)
             for i in range(batch_size):
                 single_pred = pred[i]
                 single_label = label[i]
