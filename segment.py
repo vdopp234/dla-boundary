@@ -219,6 +219,7 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
             end = time.time()
 
             if i % print_freq == 0:
+                imwrite("./validation_output_visualization/validation_img{}".format(i), output.cpu().numpy().argmax(axis=1))
                 writer.add_scalar('validate/loss', losses.avg, step)
                 writer.add_scalar('validate/score_avg', score.avg, step)
                 writer.add_scalar('validate/score', score.val, step)
