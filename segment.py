@@ -326,8 +326,9 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
         
         # compute output
         output = model(input_var)[0]
-        # print("Train Output/Target Shapes: ", output.shape, target.shape)
         loss = criterion(output, target_var)
+        imwrite("validation_visualization_images/model_pred{}.png".format(i), output.cpu().numpy())
+        imwrite("validation_visualization_images/gt_label{}.png".format(i), input.numpy())
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
