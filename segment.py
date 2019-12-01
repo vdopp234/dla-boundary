@@ -219,6 +219,7 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
             end = time.time()
 
             if i % print_freq == 0:
+                save_output_images()
                 imwrite("./validation_output_visualization/validation_img{}".format(i), output.cpu().numpy().argmax(axis=1))
                 writer.add_scalar('validate/loss', losses.avg, step)
                 writer.add_scalar('validate/score_avg', score.avg, step)
@@ -596,6 +597,48 @@ def test(eval_data_loader, model, num_classes,
         return round(np.nanmean(ious), 2)
 
 
+def test_bnd(eval_data_loader, model, num_classes,
+         output_dir='pred', has_gt=True, save_vis=False):
+    model.eval()
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    end = time.time()
+    # hist = np.zeros((num_classes, num_classes))
+    for iter, (image, label, name, size) in enumerate(eval_data_loader):
+        data_time.update(time.time() - end)
+        image_var = Variable(image, requires_grad=False, volatile=True)
+        final = model(image_var)[0]
+        _, pred = torch.max(final, 1)
+        pred = pred.cpu().data.numpy()
+        print(np.min(pred), np.max(pred))
+        batch_time.update(time.time() - end)
+        prob = torch.exp(final)
+        if save_vis:
+            out_size = eval_data_loader.dataset.img_size
+            save_output_images(pred, name, output_dir, size, out_size)
+            if prob.size(1) == 2:
+                save_prob_images(prob, name, output_dir + '_prob', size, out_size)
+            else:
+                save_colorful_images(pred, name, output_dir + '_color',
+                                     CITYSCAPE_PALLETE)
+        if has_gt:
+            label = label.numpy()  # Label is a Boundary Map!
+            boundary_score = 0
+            batch_size = 16
+            for i in range(batch_size):
+                single_pred = pred[i]
+                single_label = label[i]
+                boundary_score += db_eval_boundary(single_pred[:, :, 0], single_label[:, :, 0], bound_th=1)[0]
+            average_boundary_score = boundary_score/batch_size
+            print('===> mAP {mAP:.3f}'.format(mAP=average_boundary_score))
+        end = time.time()
+        print('Eval: [{0}/{1}]\t'
+              'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+              'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+              .format(iter, len(eval_data_loader), batch_time=batch_time,
+                      data_time=data_time))
+
+
 def resize_4d_tensor(tensor, width, height):
     ## Goes from width-height to height-width
     tensor_cpu = tensor.cpu().numpy()
@@ -674,90 +717,8 @@ def test_ms(eval_data_loader, model, num_classes, scales,
         return round(np.nanmean(ious), 2)
 
 
-def test_boundary(eval_data_loader, model, num_classes, scales,
-                output_dir='pred', has_gt=True, save_vis=False):
-    # Computes boundary ODS/OIS F-Score, Precision, Recall
-    model.eval()
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
-    end = time.time()
-    hist = np.zeros((num_classes, num_classes))
-    num_scales = len(scales)
-    for iter, input_data in enumerate(eval_data_loader):
-        data_time.update(time.time() - end)
-        if has_gt:
-            name = input_data[2]
-            label = input_data[1]
-        else:
-            name = input_data[1]
-        h, w = input_data[0].size()[2:4]
-        image = input_data[0]
-        # images.extend(input_data[-num_scales:])
-        outputs = []
-        # print("Num Images: ", len(images))
-        with torch.no_grad():
-            if type(image) == torch.Tensor and len(image.shape) != 3:                                                                                                                 image_var = Variable(image, requires_grad=False)
-            final = model(image_var)[0]
-            # print("Final Shape: ", final.shape)
-            output = final
-        # for image in images:
-            # with torch.no_grad():
-               #  if type(image) == torch.Tensor and len(image.shape) != 3:
-                 #    image_var = Variable(image, requires_grad=False)
-                   #  final = model(image_var)[0]
-                    # print("Final Shape: ", final.shape)
-                    # outputs.append(final.data)
-        # print(outputs[0].shape)
-        # raise SystemExit
-        # final = sum([resize_4d_tensor(out, w, h) for out in outputs])
-        pred = output.cpu().numpy().argmax(axis=1)
-        label = label.numpy()
-        # print("Num Outputs: ", len(outputs))
-        # for out in outputs:
-            # out = out.cpu().numpy()
-            # pred = out.argmax(axis=1).astype(np.uint8)
-            # pred = (out.argmax(axis=1) > 0).astype(out.dtype)
-            # print(np.unique(pred))
-        batch_time.update(time.time() - end)
-        if has_gt:
-                # label = label.numpy()
-            boundary_score = 0
-            for i in range(16):  # Assumes batch size of 16
-                    # print(pred[i].shape, label[i].shape)
-                pred_seg = np.expand_dims(pred[i], axis=2).astype(pred.dtype)
-                gt_bnd = np.expand_dims(label[i], axis=2).astype(pred.dtype)
-                    # imwrite("./pred_outputs/pred_test{}.png".format(i), pred_seg)
-                    # imwrite("./gt_outputs/gt_test{}.png".format(i), gt_seg)
-                    # print(np.max(pred_seg), np.max(gt_seg))
-                    # print(pred_seg, gt_seg)
-                pred_bnd = seg2bmap(pred_seg).astype(pred.dtype)
-                    # gt_bnd = seg2bmap(gt_seg).astype(pred.dtype)
-                print(np.min(pred_seg), np.max(pred_seg))
-                imwrite("./pred_outputs/pred_test{}.png".format(i), pred_seg*255)
-                imwrite("./gt_outputs/gt_test{}.png".format(i), gt_bnd*255)
-                    # print(np.min(pred_bnd), np.max(pred_bnd))
-                    # print("Pred Shape: ", pred_bnd.shape)
-                boundary_score += db_eval_boundary(pred_bnd[:, :, 0], gt_bnd[:, :, 0], bound_th=1)[0]  # Modify bound_th to represent size of boundary 
-                # hist += fast_hist(pred.flatten(), label.flatten(), num_classes)
-            average_score = boundary_score/16
-            logger.info('===> mAP {mAP:.3f}'.format(mAP=average_score))
-            f = open("boundary_outputs.txt", 'a')
-            f.write(str(average_score) + "\n")
-            f.close()
-            end = time.time()
-            logger.info('Eval: [{0}/{1}]\t'
-                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                    'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                    .format(iter, len(eval_data_loader), batch_time=batch_time,
-                            data_time=data_time))
-    if has_gt:  # val
-        ious = per_class_iu(hist) * 100
-        logger.info(' '.join('{:.03f}'.format(i) for i in ious))
-        return round(np.nanmean(ious), 2)
-
-
 def test_seg(args, writer):
-    print("MS: ", args.ms)
+    # print("MS: ", args.ms)
     batch_size = args.batch_size
     num_workers = args.workers
     phase = args.phase
@@ -825,8 +786,7 @@ def test_seg(args, writer):
     elif args.bnd:
         mAP = test_boundary(test_loader, model, args.classes, save_vis=False,
                       has_gt=phase != 'test' or args.with_gt,
-                      output_dir=out_dir,
-                      scales=scales)
+                      output_dir=out_dir)
     else:
         mAP = test(test_loader, model, args.classes, save_vis=True,
                    has_gt=phase != 'test' or args.with_gt, output_dir=out_dir)
