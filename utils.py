@@ -35,8 +35,8 @@ class DiceLoss(torch.autograd.Function):
         # the target volume can be empty - so we still want to
         # end up with a score of 1 if the result is 0/0
         IoU = intersect / union
-        print('union: {:.3f}\t intersect: {:.6f}\t target_sum: {:.0f} IoU: result_sum: {:.0f} IoU {:.7f}'.format(
-            union, intersect, target_sum, result_sum, 2*IoU))
+        # print('union: {:.3f}\t intersect: {:.6f}\t target_sum: {:.0f} IoU: result_sum: {:.0f} IoU {:.7f}'.format(
+        #     union, intersect, target_sum, result_sum, 2*IoU))
         out = torch.FloatTensor(1).fill_(2*IoU)
         self.intersect, self.union = intersect, union
         return out
