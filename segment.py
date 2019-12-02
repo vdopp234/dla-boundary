@@ -399,8 +399,7 @@ def train_seg(train_loader, model, criterion, optimizer, epoch, writer,
     for i, (input, target_seg, target_boundary, _) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
-
-        # pdb.set_trace()
+        imwrite("seg_viz/{}.png".format(i), target_seg.detach().cpu().numpy())
 
         if type(criterion) in [torch.nn.modules.loss.L1Loss,
                                torch.nn.modules.loss.MSELoss]:
@@ -493,7 +492,7 @@ def train(args, writer):
         weight = torch.from_numpy(np.array([1, args.edge_weight], dtype=np.float32))
         criterion = nn.NLLLoss2d(ignore_index=255, weight=weight)
     elif args.segmentation:
-        criterion = nn.NLLLoss2d(ignore_index=255)
+        criterion = nn.NLLLoss2d()
         # criterion = DiceLoss()
     else:
         raise ValueError("Must be training either a segmentation or boundary detection model")
