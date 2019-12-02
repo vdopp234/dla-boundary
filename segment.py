@@ -449,7 +449,7 @@ def train_seg(train_loader, model, criterion, optimizer, epoch, writer,
             # Expand Dims for compatibility with tensorboardX
             writer.add_image('train/gt', np.expand_dims(target_seg[0].cpu().numpy(), axis=0), step)
             writer.add_image('train/predicted', np.expand_dims(prediction[0], axis=0), step)
-            writer.add_image('train/prob', np.expand_dims(prob[0][1], axis=0), step)
+            writer.add_image('train/prob', np.expand_dims(prob[0][0], axis=0), step)
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
