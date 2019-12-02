@@ -259,12 +259,11 @@ class CityscapesSingleInstanceDataset(data.Dataset):
             img, [ins] = self.train_transform(img, [ins])
         
         img, [ins] = self.scale_transform(img, [ins])
-        
         ins_boundary = get_boundary_map(ins)
 
         img = tf.to_tensor(img).float()
-        ins = tf.to_tensor(ins).long().squeeze(0)
-        ins_boundary = tf.to_tensor(ins_boundary).long().squeeze(0)
+        ins_boundary = (tf.to_tensor(ins_boundary)).long().squeeze(0)
+        ins = (tf.to_tensor(ins)*255).long().squeeze(0)
 
         return img, ins, ins_boundary, bbox
     
