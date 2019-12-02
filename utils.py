@@ -26,7 +26,7 @@ class DiceLoss(torch.autograd.Function):
         result.copy_(result_)
         self.target_.copy_(target)
         target = self.target_
-        intersect = torch.mul(result, target)
+        intersect = torch.sum(torch.mul(result, target))
         # binary values so sum the same as sum of squares
         result_sum = torch.sum(result)
         target_sum = torch.sum(target)
