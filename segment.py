@@ -490,7 +490,7 @@ def train(args, writer):
     if args.boundary_detection:
         assert args.edge_weight > 0
         weight = torch.from_numpy(np.array([1, args.edge_weight], dtype=np.float32))
-        criterion = nn.NLLLoss2d(ignore_index=255, weight=weight)
+        criterion = nn.NLLLoss2d(ignore_index=255, weight=weight.cuda())
     elif args.segmentation:
         criterion = nn.BCELoss()
         # criterion = DiceLoss()
