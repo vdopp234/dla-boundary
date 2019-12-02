@@ -9,7 +9,7 @@ def main():
     num_workers = 8
     train_loader = torch.utils.data.DataLoader(
         CityscapesSingleInstanceDataset(data_dir, 'train', out_dir='edge_weight_outputs/'),
-        batch_size=1, shuffle=True, num_workers=num_workers,
+        batch_size=1, shuffle=False, num_workers=num_workers,
         pin_memory=True
     )
     cnt, bnd_cnt = 0, 0
