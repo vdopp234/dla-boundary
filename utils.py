@@ -15,7 +15,7 @@ class DiceLoss(torch.autograd.Function):
         if save:
             self.save_for_backward(input, target)
         eps = 0.000001
-        _, result_ = input.max(1)
+        _, result_ = input.max(1)  # Argmax along channel dimension
         result_ = torch.squeeze(result_)
         if input.is_cuda:
             result = torch.cuda.FloatTensor(result_.size())
@@ -26,7 +26,7 @@ class DiceLoss(torch.autograd.Function):
         result.copy_(result_)
         self.target_.copy_(target)
         target = self.target_
-        intersect = torch.dot(result, target)
+        intersect = torch.mul(result, target)
         # binary values so sum the same as sum of squares
         result_sum = torch.sum(result)
         target_sum = torch.sum(target)
