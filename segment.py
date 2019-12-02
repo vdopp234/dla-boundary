@@ -399,7 +399,7 @@ def train_seg(train_loader, model, criterion, optimizer, epoch, writer,
     for i, (input, target_seg, target_boundary, _) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
-        imwrite("seg_viz/{}.png".format(i), target_seg.detach().cpu().numpy())
+        # imwrite("seg_viz/{}.png".format(i), target_seg.detach().cpu().numpy())
 
         if type(criterion) in [torch.nn.modules.loss.L1Loss,
                                torch.nn.modules.loss.MSELoss]:
@@ -417,7 +417,7 @@ def train_seg(train_loader, model, criterion, optimizer, epoch, writer,
 
         # compute output
         output = model(input_var)[0]
-        loss = criterion(output, target_var)
+        loss = criterion(output, target_var.squeeze(1))
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))

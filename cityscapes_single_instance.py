@@ -244,6 +244,8 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         lbl = imread(lbl_path)
         lbl = self.encode_segmap(np.array(lbl, dtype=np.uint8))  # Semantic Seg Map
 
+        print(np.min(lbl), np.max(lbl), lbl.shape)
+
         ins = imread(ins_path)
         ins = self.encode_insmap(np.array(ins, dtype=np.uint16), lbl)  # Instance Segmentation Map
         
@@ -263,7 +265,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
 
         img = tf.to_tensor(img).float()
         ins_boundary = tf.to_tensor(ins_boundary).long().squeeze(0)
-        ins = (tf.to_tensor(ins)*255).squeeze(0)
+        ins = (tf.to_tensor(ins > 0)*255).squeeze(0)
 
         return img, ins, ins_boundary, bbox
     
