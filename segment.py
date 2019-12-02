@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = '5'
 print("CUDA_VISIBLE_DEVICES = ", os.environ['CUDA_VISIBLE_DEVICES'])
 
 import threading
@@ -497,7 +497,8 @@ def train(args, writer):
     else:
         raise ValueError("Must be training either a segmentation or boundary detection model")
 
-    criterion.cuda()
+    # if hasattr(criterion, cuda):
+    #     criterion.cuda()
 
     data_dir = args.data_dir
     info = dataset.load_dataset_info(data_dir)
@@ -514,7 +515,6 @@ def train(args, writer):
     t.extend([transforms.RandomHorizontalFlip(),
               transforms.ToTensor(),
               normalize])
-
 
     train_loader = torch.utils.data.DataLoader(
         CityscapesSingleInstanceDataset(data_dir, 'train', out_dir=args.out_dir),
