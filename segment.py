@@ -269,7 +269,7 @@ def accuracy(output, target):
     _, pred = output.max(1)
     pred = pred.view(1, -1)
     target = target.view(1, -1)
-    correct = pred.eq(target)
+    correct = pred.eq(target.long())
     correct = correct[target != 255]
     correct = correct.view(-1)
     score = correct.float().sum(0).mul(100.0 / correct.size(0))
