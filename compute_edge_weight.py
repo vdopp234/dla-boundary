@@ -13,7 +13,7 @@ def main():
         pin_memory=True
     )
     cnt, bnd_cnt = 0, 0
-    for (input, target_seg, target_boundary, _) in train_loader:
+    for i, (input, target_seg, target_boundary, _) in enumerate(train_loader):
         bnd_cnt += np.sum(target_boundary)
         cnt += np.product(target_boundary.shape)
 
