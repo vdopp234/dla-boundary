@@ -12,7 +12,9 @@ class DiceLoss(torch.autograd.Function):
         pass
 
     def forward(self, input, target, save=True):
+        print("save: ", save)
         if save:
+            print("Input/Target Shapes: ", input.shape, target.shape)
             self.save_for_backward(input, target)
         eps = 0.000001
         _, result_ = input.max(1)  # Argmax along channel dimension
