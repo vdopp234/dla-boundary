@@ -417,7 +417,7 @@ def train_seg(train_loader, model, criterion, optimizer, epoch, writer,
 
         # compute output
         output = model(input_var)[0]
-        loss = criterion(output, target_var.squeeze(1))
+        loss = criterion(output.squeeze(1), target_var.squeeze(1))
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
