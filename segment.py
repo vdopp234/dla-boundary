@@ -31,6 +31,7 @@ import dataset  # Import contains ImageNet dataloader, amongst other functions
 from cityscapes_single_instance import CityscapesSingleInstanceDataset
 from augmentation import Normalize
 from boundary_utils import db_eval_boundary, seg2bmap
+from utils import DiceLoss
 
 # import wandb
 # wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
@@ -188,7 +189,7 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
     model.eval()
 
     end = time.time()
-    for i, (input, target, _) in enumerate(val_loader):
+    for i, (input, target, target_boundary, _) in enumerate(val_loader):
         if type(criterion) in [torch.nn.modules.loss.L1Loss,
                                torch.nn.modules.loss.MSELoss]:
             target = target.float()
@@ -276,10 +277,10 @@ def accuracy(output, target):
     # return score.data[0]
 
 
-def train(train_loader, model, criterion, optimizer, epoch, writer,
+def train_bce(train_loader, model, criterion, optimizer, epoch, writer,
           eval_score=None, print_freq=10):
     """
-    Trains model for one epoch
+    Trains boundary-detection model using BCE loss for one epoch
     :param train_loader: Train Dataset Dataloader
     :param model: DLA_Up Model
     :param criterion: NLLLoss2D
@@ -304,7 +305,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
     info = train_loader.dataset.load_dataset_info()
     normalize = Normalize(mean=info['mean'], std=info['std'])
 
-    for i, (input, target, _) in enumerate(train_loader):
+    for i, (input, target_seg, target_boundary, _) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -312,7 +313,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
 
         if type(criterion) in [torch.nn.modules.loss.L1Loss,
                                torch.nn.modules.loss.MSELoss]:
-            target = target.float()
+            target_boundary = target_boundary.float()
         
         if i % print_freq == 0:
             step = i + len(train_loader) * epoch
@@ -320,15 +321,13 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
             
         input = normalize(input)
         input = input.cuda()
-        target = target.cuda(non_blocking=True)
+        target = target_boundary.cuda(non_blocking=True)
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
         
         # compute output
         output = model(input_var)[0]
         loss = criterion(output, target_var)
-        imwrite("validation_visualization_images/model_pred{}.png".format(i), output.cpu().numpy())
-        imwrite("validation_visualization_images/gt_label{}.png".format(i), input.numpy())
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
@@ -369,6 +368,97 @@ def train(train_loader, model, criterion, optimizer, epoch, writer,
                     data_time=data_time, loss=losses, top1=scores))
 
 
+def train_seg(train_loader, model, criterion, optimizer, epoch, writer,
+              eval_score=None, print_freq=10):
+    """
+    Trains segmentation model for one epoch
+    :param train_loader: Train Dataset Dataloader
+    :param model: DLA_Up Model
+    :param criterion: NLLLoss2D
+    :param optimizer:
+    :param epoch:
+    :param writer:
+    :param eval_score:
+    :param print_freq:
+    :return:
+    """
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    scores = AverageMeter()
+
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+
+    # normalize
+    info = train_loader.dataset.load_dataset_info()
+    normalize = Normalize(mean=info['mean'], std=info['std'])
+
+    for i, (input, target_seg, target_boundary, _) in enumerate(train_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        # pdb.set_trace()
+
+        if type(criterion) in [torch.nn.modules.loss.L1Loss,
+                               torch.nn.modules.loss.MSELoss]:
+            target_seg = target_seg.float()
+
+        if i % print_freq == 0:
+            step = i + len(train_loader) * epoch
+            writer.add_image('train/image', input[0].numpy(), step)
+
+        input = normalize(input)
+        input = input.cuda()
+        target_seg = target_seg.cuda(non_blocking=True)
+        input_var = torch.autograd.Variable(input)
+        target_var = torch.autograd.Variable(target_seg)
+
+        # compute output
+        output = model(input_var)[0]
+        loss = criterion(output, target_var)
+
+        # measure accuracy and record loss
+        # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+        losses.update(loss.data.item(), input.size(0))
+        if eval_score is not None:
+            scores.update(eval_score(output, target_var), input.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % print_freq == 0:
+            # broadcast results to tensorboard
+            writer.add_scalar('train/loss', losses.avg, step)
+            writer.add_scalar('train/score_avg', scores.avg, step)
+            writer.add_scalar('train/score', scores.val, step)
+
+            prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
+            prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
+
+            # writer.add_image('train/gt', target[0].cpu().numpy(), step)
+            # print("Target Shape: ", target.shape)
+            # Expand Dims for compatibility with tensorboardX
+            writer.add_image('train/gt', np.expand_dims(target_seg[0].cpu().numpy(), axis=0), step)
+            writer.add_image('train/predicted', np.expand_dims(prediction[0], axis=0), step)
+            writer.add_image('train/prob', np.expand_dims(prob[0][1], axis=0), step)
+            print('Epoch: [{0}][{1}/{2}]\t'
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                  'Score {top1.val:.3f} ({top1.avg:.3f})'.format(
+                epoch, i, len(train_loader), batch_time=batch_time,
+                data_time=data_time, loss=losses, top1=scores))
+
+
 def save_checkpoint(state, is_best, out_dir, filename='checkpoint.pth.tar'):
     filename = os.path.join("model_outputs", filename)  # Change to out_dir if error
     torch.save(state, filename)
@@ -376,7 +466,7 @@ def save_checkpoint(state, is_best, out_dir, filename='checkpoint.pth.tar'):
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 
-def train_seg(args, writer):
+def train(args, writer):
     """
     Full training loop for segmentation model, using (hyper)params set in commandline
     :param args: Dictionary of commandline params
@@ -398,12 +488,14 @@ def train_seg(args, writer):
     single_model = dla_up.__dict__.get(args.arch)(
         args.classes, pretrained_base, down_ratio=args.down)
     model = torch.nn.DataParallel(single_model).cuda()
-    if args.edge_weight > 0:
-        weight = torch.from_numpy(
-            np.array([1, args.edge_weight], dtype=np.float32))
+    if args.boundary_detection:
+        assert args.edge_weight > 0
+        weight = torch.from_numpy(np.array([1, args.edge_weight], dtype=np.float32))
         criterion = nn.NLLLoss2d(ignore_index=255, weight=weight)
+    elif args.segmentation:
+        criterion = DiceLoss()
     else:
-        criterion = nn.NLLLoss2d(ignore_index=255)
+        raise ValueError("Must be training either a segmentation or boundary detection model")
 
     criterion.cuda()
 
@@ -463,8 +555,14 @@ def train_seg(args, writer):
         lr = adjust_learning_rate(args, optimizer, epoch)
         print('Epoch: [{0}]\tlr {1:.06f}'.format(epoch, lr))
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, writer,
-              eval_score=accuracy)
+        if args.segmentation:
+            train_seg(train_loader, model, criterion, optimizer, epoch, writer,
+                  eval_score=accuracy)
+        elif args.boundary_detection:
+            train_bce(train_loader, model, criterion, optimizer, epoch, writer,
+                  eval_score=accuracy)
+        else:
+            raise ValueError("Must be training either a segmentation model or a boundary detection model")
 
         # evaluate on validation set
         prec1 = validate(val_loader, model, criterion, epoch, writer, eval_score=accuracy)
@@ -862,6 +960,8 @@ def parse_args():
     parser.add_argument('--edge-weight', type=int, default=-1)
     parser.add_argument('--test-suffix', default='')
     parser.add_argument('--with-gt', action='store_true')
+    parser.add_argument('--boundary-detection', action='store_true', default=False)  # Train a boundary detection model
+    parser.add_argument('--segmentation', action='store_true', default=False)  # Train a segmentation model
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -887,7 +987,7 @@ def main():
     timestamp = datetime.fromtimestamp(time.time()).strftime('%Y%n%d-%H:%M')
     writer = SummaryWriter('logs/{}'.format(timestamp))
     if args.cmd == 'train':
-        train_seg(args, writer)
+        train(args, writer)
     elif args.cmd == 'test':
         test_seg(args, writer)
 

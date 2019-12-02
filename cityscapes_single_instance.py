@@ -57,7 +57,7 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         is_transform=False,
         img_size=(512, 1024),
         augmentations=None,
-        train_transform=Compose([RandomHorizontallyFlip(0.5)]),
+        train_transform=Compose([RandomHorizontallyFlip(0.5), RandomRotate(10)]),
         scale_transform=Compose([Resize([224, 224])]),
         version="cityscapes",
         out_dir=""
@@ -242,10 +242,10 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         )
 
         lbl = imread(lbl_path)
-        lbl = self.encode_segmap(np.array(lbl, dtype=np.uint8))
+        lbl = self.encode_segmap(np.array(lbl, dtype=np.uint8))  # Semantic Seg Map
 
         ins = imread(ins_path)
-        ins = self.encode_insmap(np.array(ins, dtype=np.uint16), lbl)
+        ins = self.encode_insmap(np.array(ins, dtype=np.uint16), lbl)  # Instance Segmentation Map
         
         bbox = self.labels_coords[index]
         ins[ins != self.ins_ids[index]] = 0
@@ -260,14 +260,12 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         
         img, [ins] = self.scale_transform(img, [ins])
         
-        ins = get_boundary_map(ins)
-        # ins = np.expand_dims(ins, axis=2)  # Add dimension for channel, converted to CHW in tf.to_tensor()
-        
+        ins_boundary = get_boundary_map(ins)
+
         img = tf.to_tensor(img).float()
         ins = tf.to_tensor(ins).long().squeeze(0)
-        # print("Ins Shape: ", ins.shape)
-        # print("Input Shapes: ", img.shape, ins.shape)
-        return img, ins, bbox
+
+        return img, ins, ins_boundary, bbox
     
 
     def decode_segmap(self, temp):
@@ -335,11 +333,11 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         lbl_out[:y2-y1, :x2-x1] = lbl[y1:y2,x1:x2]
 
         # Visualization Code
-        if save_tag is not None:
-            if random.random() < 1e-3:  # Only save small fraction of images
-                x = save_tag.split('/')[len(save_tag) - 1]
-                imwrite("./visualization_crops/{}_gt.png".format(x), img_out)
-                imwrite("./visualization_crops/{}_pred.png".format(x), lbl_out)
+        # if save_tag is not None:
+        #     if random.random() < 1e-3:  # Only save small fraction of images
+        #         x = save_tag.split('/')[len(save_tag) - 1]
+        #         imwrite("./visualization_crops/{}_gt.png".format(x), img_out)
+        #         imwrite("./visualization_crops/{}_pred.png".format(x), lbl_out)
         # End Visualization Code
         return img_out.astype(np.uint8), lbl_out.astype(np.uint8)
     
