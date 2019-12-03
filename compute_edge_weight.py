@@ -17,7 +17,7 @@ def main():
         bnd_cnt += np.sum(target_boundary)
         cnt += np.product(target_boundary.shape)
 
-    f = open("edge_weight_outputs/edge_weight.txt")
+    f = open("edge_weight_outputs/edge_weight.txt", 'w')
     f.write(str(cnt/bnd_cnt))
     f.close()
 

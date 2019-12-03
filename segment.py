@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '5'
+os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 print("CUDA_VISIBLE_DEVICES = ", os.environ['CUDA_VISIBLE_DEVICES'])
 
 import threading
@@ -169,7 +169,7 @@ class SegListMS(torch.utils.data.Dataset):
             assert len(self.image_list) == len(self.label_list)
 
 
-def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print_freq=10):
+def validate_segmentation(val_loader, model, criterion, epoch, writer, eval_score=None, print_freq=10):
     """
     Computes validation metrics
     :param val_loader: Validation dataset
@@ -189,17 +189,18 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
     model.eval()
 
     end = time.time()
-    for i, (input, target, target_boundary, _) in enumerate(val_loader):
+    for i, (input, target_seg, target_boundary, _) in enumerate(val_loader):
         if type(criterion) in [torch.nn.modules.loss.L1Loss,
                                torch.nn.modules.loss.MSELoss]:
-            target = target.float()
+            target = target_seg.float()
 
         if i % print_freq == 0:
             step = i + len(val_loader) * epoch
             writer.add_image('validate/image', input[0].numpy(), step)
 
         input = input.cuda()
-        target = target.cuda(non_blocking=True)
+        target = target_seg.cuda(non_blocking=True)
+
         with torch.no_grad():
             input_var = torch.autograd.Variable(input)
             target_var = torch.autograd.Variable(target)
@@ -209,8 +210,6 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
             loss = criterion(output, target_var)
 
             # measure accuracy and record loss
-            # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-            # losses.update(loss.data[0], input.size(0))
             losses.update(loss.data.item())
             if eval_score is not None:
                 score.update(eval_score(output, target_var), input.size(0))
@@ -220,8 +219,81 @@ def validate(val_loader, model, criterion, epoch, writer, eval_score=None, print
             end = time.time()
 
             if i % print_freq == 0:
-                save_output_images()
-                imwrite("./validation_output_visualization/validation_img{}".format(i), output.cpu().numpy().argmax(axis=1))
+                # save_output_images()
+                # imwrite("./validation_output_visualization/validation_img{}".format(i), output.cpu().numpy().argmax(axis=1))
+                writer.add_scalar('validate/loss', losses.avg, step)
+                writer.add_scalar('validate/score_avg', score.avg, step)
+                writer.add_scalar('validate/score', score.val, step)
+
+                prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
+                prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
+
+                writer.add_image('validate/gt', np.expand_dims(target[0].cpu().numpy(), axis=0), step)
+                writer.add_image('validate/predicted', np.expand_dims(prediction[0], axis=0), step)
+                writer.add_image('validate/prob', np.expand_dims(prob[0][1], axis=0), step)
+                print('Test: [{0}/{1}]\t'
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                      'Score {score.val:.3f} ({score.avg:.3f})'.format(
+                        i, len(val_loader), batch_time=batch_time, loss=losses,
+                        score=score), flush=True)
+
+    print(' * Score {top1.avg:.3f}'.format(top1=score))
+
+    return score.avg
+
+
+def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=None, print_freq=10):
+    """
+    Computes validation metrics
+    :param val_loader: Validation dataset
+    :param model:
+    :param criterion:
+    :param epoch:
+    :param writer:
+    :param eval_score:
+    :param print_freq:
+    :return:
+    """
+    batch_time = AverageMeter()
+    losses = AverageMeter()
+    score = AverageMeter()
+
+    # switch to evaluate mode
+    model.eval()
+
+    end = time.time()
+    for i, (input, target_seg, target_boundary, _) in enumerate(val_loader):
+        if type(criterion) in [torch.nn.modules.loss.L1Loss,
+                               torch.nn.modules.loss.MSELoss]:
+            target = target_boundary.float()
+
+        if i % print_freq == 0:
+            step = i + len(val_loader) * epoch
+            writer.add_image('validate/image', input[0].numpy(), step)
+
+        input = input.cuda()
+        target = target_boundary.cuda(non_blocking=True)
+        with torch.no_grad():
+            input_var = torch.autograd.Variable(input)
+            target_var = torch.autograd.Variable(target)
+
+            # compute output
+            output = model(input_var)[0]
+            loss = criterion(output, target_var)
+
+            # measure accuracy and record loss
+            losses.update(loss.data.item())
+            if eval_score is not None:
+                score.update(eval_score(output, target_var), input.size(0))
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            if i % print_freq == 0:
+                # save_output_images()
+                # imwrite("./validation_output_visualization/validation_img{}".format(i), output.cpu().numpy().argmax(axis=1))
                 writer.add_scalar('validate/loss', losses.avg, step)
                 writer.add_scalar('validate/score_avg', score.avg, step)
                 writer.add_scalar('validate/score', score.val, step)
@@ -490,9 +562,11 @@ def train(args, writer):
     if args.boundary_detection:
         assert args.edge_weight > 0
         weight = torch.from_numpy(np.array([1, args.edge_weight], dtype=np.float32))
+        validate = validate_segmentation
         criterion = nn.NLLLoss2d(ignore_index=255, weight=weight.cuda())
     elif args.segmentation:
         criterion = nn.BCELoss()
+        validate = validate_boundary
         # criterion = DiceLoss()
     else:
         raise ValueError("Must be training either a segmentation or boundary detection model")

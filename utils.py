@@ -53,7 +53,7 @@ class DiceLoss(torch.autograd.Function):
         dDice = torch.add(torch.mul(gt, 2), torch.mul(pred, -4))
         grad_input = torch.cat((torch.mul(dDice, -grad_output[0]),
                                 torch.mul(dDice, grad_output[0])), 0)
-        return grad_input , None
+        return grad_input, None
 
 
 def recursive_glob(rootdir=".", suffix=""):
