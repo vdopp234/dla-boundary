@@ -230,7 +230,7 @@ def validate_segmentation(val_loader, model, criterion, epoch, writer, eval_scor
 
                 writer.add_image('validate/gt', np.expand_dims(target[0].cpu().numpy(), axis=0), step)
                 writer.add_image('validate/predicted', np.expand_dims(prediction[0], axis=0), step)
-                writer.add_image('validate/prob', np.expand_dims(prob[0][1], axis=0), step)
+                # writer.add_image('validate/prob', np.expand_dims(prob[0][1], axis=0), step)
                 print('Test: [{0}/{1}]\t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -303,7 +303,7 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
 
                 writer.add_image('validate/gt', np.expand_dims(target[0].cpu().numpy(), axis=0), step)
                 writer.add_image('validate/predicted', np.expand_dims(prediction[0], axis=0), step)
-                writer.add_image('validate/prob', np.expand_dims(prob[0][1], axis=0), step)
+                # writer.add_image('validate/prob', np.expand_dims(prob[0][1], axis=0), step)
                 print('Test: [{0}/{1}]\t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -563,7 +563,7 @@ def train(args, writer):
         assert args.edge_weight > 0
         weight = torch.from_numpy(np.array([1, args.edge_weight], dtype=np.float32))
         validate = validate_boundary
-        criterion = nn.NLLLoss2d(ignore_index=255, weight=weight.cuda())
+        criterion = nn.NLLLoss(ignore_index=255, weight=weight.cuda())
     elif args.segmentation:
         criterion = nn.BCELoss()
         validate = validate_segmentation
