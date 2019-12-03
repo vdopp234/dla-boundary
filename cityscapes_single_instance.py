@@ -262,8 +262,8 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         ins_boundary = get_boundary_map(ins)
 
         img = tf.to_tensor(img).float()
-        ins_boundary = tf.to_tensor(ins_boundary).long().squeeze(0)
-        ins = (tf.to_tensor((np.asarray(ins) > 0).astype(np.float32))).squeeze(0)
+        ins_boundary = tf.to_tensor(ins_boundary).long()
+        ins = (tf.to_tensor((np.asarray(ins) > 0).astype(np.float32)))
 
         return img, ins, ins_boundary, bbox
     

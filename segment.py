@@ -33,8 +33,8 @@ from augmentation import Normalize
 from boundary_utils import db_eval_boundary, seg2bmap
 from utils import DiceLoss
 
-# import wandb
-# wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
+import wandb
+wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
 
 try:
     from modules import batchnormsync
@@ -266,7 +266,7 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
     for i, (input, target_seg, target_boundary, _) in enumerate(val_loader):
         if type(criterion) in [torch.nn.modules.loss.L1Loss,
                                torch.nn.modules.loss.MSELoss]:
-            target = target_boundary.float()
+            target_boundary = target_boundary.float()
 
         if i % print_freq == 0:
             step = i + len(val_loader) * epoch
@@ -562,11 +562,11 @@ def train(args, writer):
     if args.boundary_detection:
         assert args.edge_weight > 0
         weight = torch.from_numpy(np.array([1, args.edge_weight], dtype=np.float32))
-        validate = validate_segmentation
+        validate = validate_boundary
         criterion = nn.NLLLoss2d(ignore_index=255, weight=weight.cuda())
     elif args.segmentation:
         criterion = nn.BCELoss()
-        validate = validate_boundary
+        validate = validate_segmentation
         # criterion = DiceLoss()
     else:
         raise ValueError("Must be training either a segmentation or boundary detection model")
@@ -578,7 +578,7 @@ def train(args, writer):
     info = dataset.load_dataset_info(data_dir)
     normalize = transforms.Normalize(mean=info.mean, std=info.std)
     t = []
-    # Create array of transforms based on arguments passed in during terminal call
+    # Create array of transforms based on arguments passed in shell script
     if args.random_rotate > 0:
         t.append(transforms.RandomRotate(args.random_rotate))
     if args.random_scale > 0:
@@ -620,6 +620,10 @@ def train(args, writer):
                   .format(args.resume, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
+
+    ## DEBUGGING CODE ##
+    args.evaluate = True
+    start_epoch = 1
 
     if args.evaluate and start_epoch > 0:
         validate(val_loader, model, criterion, start_epoch-1, writer, eval_score=accuracy)
