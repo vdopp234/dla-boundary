@@ -531,7 +531,7 @@ def train_seg(train_loader, model, criterion, optimizer, epoch, writer,
 
 
 def save_checkpoint(state, is_best, out_dir, filename='checkpoint.pth.tar'):
-    filename = os.path.join("model_outputs", filename)  # Change to out_dir if error
+    filename = os.path.join(out_dir, filename)  # Change to out_dir if error
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
@@ -621,9 +621,9 @@ def train(args, writer):
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
-    ## DEBUGGING CODE ##
-    args.evaluate = True
-    start_epoch = 1
+    # ## DEBUGGING CODE ##
+    # args.evaluate = True
+    # start_epoch = 1
 
     if args.evaluate and start_epoch > 0:
         validate(val_loader, model, criterion, start_epoch-1, writer, eval_score=accuracy)
@@ -647,8 +647,9 @@ def train(args, writer):
 
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
-        checkpoint_path = './checkpoints/checkpoint_latest.pth'
+        checkpoint_path = 'checkpoint_latest.pth'
         # checkpoint_path = './checkpoints/checkpoint_latest.pth.tar'
+        print(args.out_dir)
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': args.arch,
