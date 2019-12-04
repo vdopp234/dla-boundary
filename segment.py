@@ -534,7 +534,7 @@ def save_checkpoint(state, is_best, out_dir, filename='checkpoint.pth.tar'):
     filename = os.path.join(out_dir, filename)  # Change to out_dir if error
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(filename, os.path.join(out_dir, 'model_best.pth.tar'))
 
 
 def train(args, writer):
@@ -649,7 +649,7 @@ def train(args, writer):
         best_prec1 = max(prec1, best_prec1)
         checkpoint_path = 'checkpoint_latest.pth'
         # checkpoint_path = './checkpoints/checkpoint_latest.pth.tar'
-        print(args.out_dir)
+        # print(args.out_dir)
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': args.arch,
