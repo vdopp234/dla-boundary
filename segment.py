@@ -786,6 +786,9 @@ def test(eval_data_loader, model, num_classes,
                       data_time=data_time))
     ious = per_class_iu(hist) * 100
     print(' '.join('{:.03f}'.format(i) for i in ious))
+    f = open(os.path.join(output_dir, "iou_eval.txt"), 'w')
+    f.write(str(np.nanmean(ious)) + "\n")
+    f.close()
     if has_gt:  # val
         return round(np.nanmean(ious), 2)
 
@@ -1000,7 +1003,7 @@ def test_seg(args, writer):
                       has_gt=phase != 'test' or args.with_gt,
                       output_dir=args.out_dir)
     else:
-        mAP = test(test_loader, model, args.classes, save_vis=True,
+        mAP = test(test_loader, model, args.classes, save_vis=False,
                    has_gt=phase != 'test' or args.with_gt, output_dir=args.out_dir)
     print('mAP: ', mAP)
 
