@@ -757,7 +757,6 @@ def test(eval_data_loader, model, num_classes,
     data_time = AverageMeter()
     end = time.time()
     hist = np.zeros((num_classes, num_classes))
-
     for iter, (image, label, name, size) in enumerate(eval_data_loader):
         data_time.update(time.time() - end)
         image_var = Variable(image, requires_grad=False, volatile=True)
@@ -800,6 +799,8 @@ def test_boundary(eval_data_loader, model, num_classes,
     # hist = np.zeros((num_classes, num_classes))
     boundary_score_outer = 0
     thresh = 1
+    total_imgs = 0
+    print("Length: ", len(eval_data_loader))
     for iter, (image, label_seg, label_boundary, _) in enumerate(eval_data_loader):
         data_time.update(time.time() - end)
         image_var = Variable(image, requires_grad=False, volatile=True)
@@ -809,9 +810,10 @@ def test_boundary(eval_data_loader, model, num_classes,
         batch_time.update(time.time() - end)
         prob = torch.exp(final)
         if has_gt:
-            label = label.numpy()  # Label is a Boundary Map!
+            label = label_boundary.numpy()  # Label is a Boundary Map!
             boundary_score = 0
-            batch_size = 16
+            batch_size = label.shape[0]
+            total_imgs += batch_size
             for i in range(batch_size):
                 single_pred = pred[i]
                 single_label = label[i]
@@ -829,7 +831,7 @@ def test_boundary(eval_data_loader, model, num_classes,
                       data_time=data_time))
 
     # Write boundary evaluation score to file
-    average_boundary_score = boundary_score_outer/len(eval_data_loader)
+    average_boundary_score = boundary_score_outer/total_imgs
     f = open(os.path.join(output_dir, 'eval_thresh{}.txt'.format(thresh)), 'w')
     f.write(str(average_boundary_score) + "\n")
     f.close()
@@ -914,7 +916,6 @@ def test_ms(eval_data_loader, model, num_classes, scales,
 
 
 def test_seg(args, writer):
-    # print("MS: ", args.ms)
     batch_size = args.batch_size
     num_workers = args.workers
     phase = args.phase
