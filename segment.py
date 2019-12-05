@@ -772,8 +772,8 @@ def test(eval_data_loader, model, num_classes,
             hist += fast_hist(pred.flatten(), label.flatten(), num_classes)
             print('===> mAP {mAP:.3f}'.format(
                 mAP=round(np.nanmean(per_class_iu(hist)) * 100, 2)))
-        imwrite(os.path.join(output_dir, "pred_img{}".format(iter)), pred[0])
-        imwrite(os.path.join(output_dir, "gt_img{}".format(iter)), label[0])
+        imwrite(os.path.join(output_dir, "pred_img{}.png".format(iter)), pred[0])
+        imwrite(os.path.join(output_dir, "gt_img{}.png".format(iter)), label[0])
         end = time.time()
         print('Eval: [{0}/{1}]\t'
               'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
