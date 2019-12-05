@@ -649,7 +649,6 @@ def train(args, writer):
         best_prec1 = max(prec1, best_prec1)
         checkpoint_path = 'checkpoint_latest.pth'
         # checkpoint_path = './checkpoints/checkpoint_latest.pth.tar'
-        # print(args.out_dir)
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': args.arch,
@@ -795,36 +794,41 @@ def test_boundary(eval_data_loader, model, num_classes,
     data_time = AverageMeter()
     end = time.time()
     # hist = np.zeros((num_classes, num_classes))
-    for iter, (image, label, _) in enumerate(eval_data_loader):
+    boundary_score_outer = 0
+    thresh = 1
+    for iter, (image, label_seg, label_boundary, _) in enumerate(eval_data_loader):
         data_time.update(time.time() - end)
         image_var = Variable(image, requires_grad=False, volatile=True)
         final = model(image_var)[0]
-        # print("Final Shape: ", final.shape)
         _, pred = torch.max(final, 1)  # Returns argmax
         pred = pred.cpu().data.numpy()
-        print(np.min(pred), np.max(pred))
         batch_time.update(time.time() - end)
         prob = torch.exp(final)
-        # print("Prob min/max: ", torch.min(prob), torch.max(prob))
         if has_gt:
             label = label.numpy()  # Label is a Boundary Map!
             boundary_score = 0
             batch_size = 16
-            # print(label.shape, pred.shape)
             for i in range(batch_size):
                 single_pred = pred[i]
                 single_label = label[i]
-                imwrite("gt_outputs/gt_img{}.png".format(i), single_label.astype(np.uint8)*255)
-                imwrite("pred_outputs/pred_img{}.png".format(i), single_pred.astype(np.uint8)*255)
-                boundary_score += db_eval_boundary(single_pred, single_label, bound_th=1)[0]
-            average_boundary_score = boundary_score/batch_size
-            print('===> mAP {mAP:.3f}'.format(mAP=average_boundary_score))
+                # imwrite("gt_outputs/gt_img{}.png".format(i), single_label.astype(np.uint8)*255)
+                # imwrite("pred_outputs/pred_img{}.png".format(i), single_pred.astype(np.uint8)*255)
+                boundary_eval = db_eval_boundary(single_pred, single_label, bound_th=thresh)[0]
+                boundary_score_outer += boundary_eval
+                boundary_score += boundary_eval
+            print('===> mAP {mAP:.3f}'.format(mAP=boundary_score/batch_size))
         end = time.time()
         print('Eval: [{0}/{1}]\t'
               'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
               'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
               .format(iter, len(eval_data_loader), batch_time=batch_time,
                       data_time=data_time))
+
+    # Write boundary evaluation score to file
+    average_boundary_score = boundary_score_outer/len(eval_data_loader)
+    f = open(os.path.join(output_dir, 'eval_thresh{}.txt'.format(thresh)), 'w')
+    f.write(str(average_boundary_score) + "\n")
+    f.close()
 
 
 def resize_4d_tensor(tensor, width, height):
@@ -974,10 +978,10 @@ def test_seg(args, writer):
     elif args.bnd:
         mAP = test_boundary(test_loader, model, args.classes, save_vis=False,
                       has_gt=phase != 'test' or args.with_gt,
-                      output_dir=out_dir)
+                      output_dir=args.out_dir)
     else:
         mAP = test(test_loader, model, args.classes, save_vis=True,
-                   has_gt=phase != 'test' or args.with_gt, output_dir=out_dir)
+                   has_gt=phase != 'test' or args.with_gt, output_dir=args.out_dir)
     print('mAP: ', mAP)
 
 
