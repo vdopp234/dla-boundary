@@ -32,9 +32,8 @@ from cityscapes_single_instance import CityscapesSingleInstanceDataset
 from augmentation import Normalize
 from boundary_utils import db_eval_boundary, seg2bmap
 from utils import DiceLoss
-
 import wandb
-wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
+
 
 try:
     from modules import batchnormsync
@@ -546,6 +545,10 @@ def train(args, writer):
     :return:
     """
 
+    if args.wandb:
+        wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
+
+
     batch_size = args.batch_size
     num_workers = args.workers
     crop_size = args.crop_size
@@ -754,6 +757,7 @@ def test(eval_data_loader, model, num_classes,
     data_time = AverageMeter()
     end = time.time()
     hist = np.zeros((num_classes, num_classes))
+
     for iter, (image, label, name, size) in enumerate(eval_data_loader):
         data_time.update(time.time() - end)
         image_var = Variable(image, requires_grad=False, volatile=True)
@@ -915,6 +919,9 @@ def test_seg(args, writer):
     num_workers = args.workers
     phase = args.phase
 
+    if args.wandb:
+        wandb.init(project="dla-boundary-run01", sync_tensorboard=True)
+
     for k, v in args.__dict__.items():
         print(k, ':', v)
 
@@ -975,7 +982,7 @@ def test_seg(args, writer):
                       has_gt=phase != 'test' or args.with_gt,
                       output_dir=out_dir,
                       scales=scales)
-    elif args.bnd:
+    elif args.boundary_detection:
         mAP = test_boundary(test_loader, model, args.classes, save_vis=False,
                       has_gt=phase != 'test' or args.with_gt,
                       output_dir=args.out_dir)
@@ -1045,6 +1052,7 @@ def parse_args():
     parser.add_argument('--with-gt', action='store_true')
     parser.add_argument('--boundary-detection', action='store_true', default=False)  # Train a boundary detection model
     parser.add_argument('--segmentation', action='store_true', default=False)  # Train a segmentation model
+    parser.add_argument("--wandb", action='store_true', default=False)
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
