@@ -797,7 +797,9 @@ def test_boundary(eval_data_loader, model, num_classes,
     data_time = AverageMeter()
     end = time.time()
     # hist = np.zeros((num_classes, num_classes))
-    boundary_score_outer = 0
+    total_score_thresh1 = 0
+    total_score_thresh2 = 0
+    total_score_thresh4 = 0
     thresh = 1
     total_imgs = 0
     print("Length: ", len(eval_data_loader))
@@ -819,9 +821,11 @@ def test_boundary(eval_data_loader, model, num_classes,
                 single_label = label[i]
                 # imwrite("gt_outputs/gt_img{}.png".format(i), single_label.astype(np.uint8)*255)
                 # imwrite("pred_outputs/pred_img{}.png".format(i), single_pred.astype(np.uint8)*255)
-                boundary_eval = db_eval_boundary(single_pred, single_label, bound_th=thresh)[0]
-                boundary_score_outer += boundary_eval
-                boundary_score += boundary_eval
+                x = db_eval_boundary(single_pred, single_label, bound_th=1)[0]
+                total_score_thresh1 += db_eval_boundary(single_pred, single_label, bound_th=1)[0]
+                total_score_thresh2 += db_eval_boundary(single_pred, single_label, bound_th=2)[0]
+                total_score_thresh4 += db_eval_boundary(single_pred, single_label, bound_th=4)[0]
+                boundary_score += x
             print('===> mAP {mAP:.3f}'.format(mAP=boundary_score/batch_size))
         end = time.time()
         print('Eval: [{0}/{1}]\t'
@@ -831,9 +835,17 @@ def test_boundary(eval_data_loader, model, num_classes,
                       data_time=data_time))
 
     # Write boundary evaluation score to file
-    average_boundary_score = boundary_score_outer/total_imgs
-    f = open(os.path.join(output_dir, 'eval_thresh{}.txt'.format(thresh)), 'w')
-    f.write(str(average_boundary_score) + "\n")
+    average_score1 = total_score_thresh1/total_imgs
+    average_score2 = total_score_thresh2/total_imgs
+    average_score4 = total_score_thresh4/total_imgs
+    f = open(os.path.join(output_dir, 'eval_thresh1.txt'), 'w')
+    f.write(str(average_score1) + "\n")
+    f.close()
+    f = open(os.path.join(output_dir, 'eval_thresh2.txt'), 'w')
+    f.write(str(average_score2) + "\n")
+    f.close()
+    f = open(os.path.join(output_dir, 'eval_thresh4.txt'), 'w')
+    f.write(str(average_score4) + "\n")
     f.close()
 
 
