@@ -773,7 +773,7 @@ def test(eval_data_loader, model, num_classes,
             print('===> mAP {mAP:.3f}'.format(
                 mAP=round(np.nanmean(per_class_iu(hist)) * 100, 2)))
         imwrite(os.path.join(output_dir, "pred_img{}.png".format(iter)), pred[0])
-        imwrite(os.path.join(output_dir, "gt_img{}.png".format(iter)), label[0])
+        imwrite(os.path.join(output_dir, "gt_img{}.png".format(iter)), np.squeeze(label, axis=1)[0])
         end = time.time()
         print('Eval: [{0}/{1}]\t'
               'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -795,7 +795,6 @@ def test_boundary(eval_data_loader, model, num_classes,
     batch_time = AverageMeter()
     data_time = AverageMeter()
     end = time.time()
-    # hist = np.zeros((num_classes, num_classes))
     total_score_thresh1 = 0
     total_score_thresh2 = 0
     total_score_thresh4 = 0
@@ -812,12 +811,15 @@ def test_boundary(eval_data_loader, model, num_classes,
         prob = torch.exp(final)
         if has_gt:
             label = label_boundary.numpy()  # Label is a Boundary Map!
+            input_np = image.detach().cpu().numpy()
             boundary_score = 0
             batch_size = label.shape[0]
             total_imgs += batch_size
             for i in range(batch_size):
                 single_pred = pred[i]
                 single_label = label[i]
+                single_image = input_np[i]
+                # imwrite(os.path.join(output_dir, "input_img{}.png".format(i)), single_image)
                 # imwrite("gt_outputs/gt_img{}.png".format(i), single_label.astype(np.uint8)*255)
                 # imwrite("pred_outputs/pred_img{}.png".format(i), single_pred.astype(np.uint8)*255)
                 x = db_eval_boundary(single_pred, single_label, bound_th=1)[0]
@@ -951,9 +953,11 @@ def test_seg(args, writer):
     if args.crop_size > 0:
         t.append(transforms.PadToSize(args.crop_size))
 
+    # t.extend([transforms.RandomHorizontalFlip(),
+    #           transforms.ToTensor(),
+    #           normalize])
     t.extend([transforms.RandomHorizontalFlip(),
-              transforms.ToTensor(),
-              normalize])
+              transforms.ToTensor()])
     # Is there any reason for transforms in validation code?
     test_loader = torch.utils.data.DataLoader(
         CityscapesSingleInstanceDataset(data_dir, 'val', out_dir=args.out_dir),
