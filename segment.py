@@ -803,6 +803,7 @@ def test_boundary(eval_data_loader, model, num_classes,
     print("Length: ", len(eval_data_loader))
     for iter, (image, label_seg, label_boundary, _) in enumerate(eval_data_loader):
         data_time.update(time.time() - end)
+        input_np = image.detach().cpu().numpy()
         image_var = Variable(image, requires_grad=False, volatile=True)
         final = model(image_var)[0]
         _, pred = torch.max(final, 1)  # Returns argmax
@@ -811,7 +812,6 @@ def test_boundary(eval_data_loader, model, num_classes,
         prob = torch.exp(final)
         if has_gt:
             label = label_boundary.numpy()  # Label is a Boundary Map!
-            input_np = image.detach().cpu().numpy()
             boundary_score = 0
             batch_size = label.shape[0]
             total_imgs += batch_size
@@ -819,6 +819,7 @@ def test_boundary(eval_data_loader, model, num_classes,
                 single_pred = pred[i]
                 single_label = label[i]
                 single_image = input_np[i]
+                print(np.min(single_image), np.max(single_image))
                 # imwrite(os.path.join(output_dir, "input_img{}.png".format(i)), single_image)
                 # imwrite("gt_outputs/gt_img{}.png".format(i), single_label.astype(np.uint8)*255)
                 # imwrite("pred_outputs/pred_img{}.png".format(i), single_pred.astype(np.uint8)*255)
