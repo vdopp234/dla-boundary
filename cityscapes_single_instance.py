@@ -124,7 +124,6 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         self.ignore_index = 250
         self.class_map = dict(zip(self.valid_classes, range(8)))
 
-        # print("Example image: ", img_paths[4], "NumImgs: ", len(img_paths))  # TODO: Delete this comment
 
         self.img_paths, self.labels_coords, self.img_index_of_label, self.ins_ids = self._prepare_labels(img_paths, out_dir)
         
@@ -260,8 +259,6 @@ class CityscapesSingleInstanceDataset(data.Dataset):
         
         img, [ins] = self.scale_transform(img, [ins])
         ins_boundary = get_boundary_map(ins)
-
-        print(np.min(img), np.max(img))
 
         img = tf.to_tensor(img).float()
         ins_boundary = tf.to_tensor(ins_boundary).long().squeeze(0)  # Squeeze channel dim for validation

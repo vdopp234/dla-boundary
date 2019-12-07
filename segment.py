@@ -798,9 +798,7 @@ def test_boundary(eval_data_loader, model, num_classes,
     total_score_thresh1 = 0
     total_score_thresh2 = 0
     total_score_thresh4 = 0
-    thresh = 1
     total_imgs = 0
-    print("Length: ", len(eval_data_loader))
     for iter, (image, label_seg, label_boundary, _) in enumerate(eval_data_loader):
         data_time.update(time.time() - end)
         input_np = image.detach().cpu().numpy()
@@ -819,10 +817,9 @@ def test_boundary(eval_data_loader, model, num_classes,
                 single_pred = pred[i]
                 single_label = label[i]
                 single_image = input_np[i]
-                print(np.min(single_image), np.max(single_image))
                 # imwrite(os.path.join(output_dir, "input_img{}.png".format(i)), single_image)
-                # imwrite("gt_outputs/gt_img{}.png".format(i), single_label.astype(np.uint8)*255)
-                # imwrite("pred_outputs/pred_img{}.png".format(i), single_pred.astype(np.uint8)*255)
+                # imwrite(os.path.join(output_dir, "gt_img{}.png".format(i)), single_label.astype(np.uint8)*255)
+                # imwrite(os.path.join(output_dir, "pred_img{}.png".format(i)), single_pred.astype(np.uint8)*255)
                 x = db_eval_boundary(single_pred, single_label, bound_th=1)[0]
                 total_score_thresh1 += db_eval_boundary(single_pred, single_label, bound_th=1)[0]
                 total_score_thresh2 += db_eval_boundary(single_pred, single_label, bound_th=2)[0]
@@ -954,11 +951,11 @@ def test_seg(args, writer):
     if args.crop_size > 0:
         t.append(transforms.PadToSize(args.crop_size))
 
-    # t.extend([transforms.RandomHorizontalFlip(),
-    #           transforms.ToTensor(),
-    #           normalize])
     t.extend([transforms.RandomHorizontalFlip(),
-              transforms.ToTensor()])
+              transforms.ToTensor(),
+              normalize])
+    # t.extend([transforms.RandomHorizontalFlip(),
+    #           transforms.ToTensor()])
     # Is there any reason for transforms in validation code?
     test_loader = torch.utils.data.DataLoader(
         CityscapesSingleInstanceDataset(data_dir, 'val', out_dir=args.out_dir),
