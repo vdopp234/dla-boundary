@@ -819,9 +819,9 @@ def test_boundary(eval_data_loader, model, num_classes,
                 single_image = input_np[i]
                 single_pred_thin = bwmorph_thin(image=single_pred)
                 imwrite(os.path.join(output_dir, "input_img{}.png".format(i)), single_image)
-                imwrite(os.path.join(output_dir, "input_img{}_thin.png".format(i)), single_image)
                 imwrite(os.path.join(output_dir, "gt_img{}.png".format(i)), single_label.astype(np.uint8)*255)
                 imwrite(os.path.join(output_dir, "pred_img{}.png".format(i)), single_pred.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "pred_img{}_thin.png".format(i)), single_pred_thin)
                 x = db_eval_boundary(single_pred, single_label, bound_th=1)[0]
                 total_score_thresh1 += db_eval_boundary(single_pred, single_label, bound_th=1)[0]
                 total_score_thresh2 += db_eval_boundary(single_pred, single_label, bound_th=2)[0]
