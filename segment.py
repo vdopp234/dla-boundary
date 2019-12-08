@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 print("CUDA_VISIBLE_DEVICES = ", os.environ['CUDA_VISIBLE_DEVICES'])
 
 import threading
@@ -821,10 +821,10 @@ def test_boundary(eval_data_loader, model, num_classes,
                 single_label = label[i]
                 single_image = np.moveaxis(input_np[i], 0, 2)
                 single_pred_thin = bwmorph_thin(image=single_pred)  # Edge thinning
-                imwrite(os.path.join(output_dir, "input_img{}.png".format(iter * batch_size + i)), single_image.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "gt_img{}.png".format(iter * batch_size + i)), single_label.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "pred_img{}.png".format(iter * batch_size + i)), single_pred.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "pred_img{}_thin.png".format(iter * batch_size + i)), single_pred_thin.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/input_img{}.png".format(iter * batch_size + i)), single_image.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/gt_img{}.png".format(iter * batch_size + i)), single_label.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/pred_img{}.png".format(iter * batch_size + i)), single_pred.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/pred_img{}_thin.png".format(iter * batch_size + i)), single_pred_thin.astype(np.uint8)*255)
                 x = db_eval_boundary(single_pred, single_label, bound_th=1)[0]
                 total_score_thresh1 += x
                 total_score_thresh2 += db_eval_boundary(single_pred, single_label, bound_th=2)[0]
