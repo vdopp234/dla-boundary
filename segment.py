@@ -820,13 +820,13 @@ def test_boundary(eval_data_loader, model, num_classes,
                 single_pred = pred[i]
                 single_label = label[i]
                 single_image = input_np[i]
-                single_pred_thin = bwmorph_thin(image=single_pred)
-                # imwrite(os.path.join(output_dir, "input_img{}.png".format(i)), single_image.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "gt_img{}.png".format(i)), single_label.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "pred_img{}.png".format(i)), single_pred.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "pred_img{}_thin.png".format(i)), single_pred_thin.astype(np.uint8)*255)
+                single_pred_thin = bwmorph_thin(image=single_pred)  # Edge thinning
+                imwrite(os.path.join(output_dir, "input_img{}.png".format(iter * batch_size + i)), single_image.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "gt_img{}.png".format(iter * batch_size + i)), single_label.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "pred_img{}.png".format(iter * batch_size + i)), single_pred.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "pred_img{}_thin.png".format(iter * batch_size + i)), single_pred_thin.astype(np.uint8)*255)
                 x = db_eval_boundary(single_pred, single_label, bound_th=1)[0]
-                total_score_thresh1 += db_eval_boundary(single_pred, single_label, bound_th=1)[0]
+                total_score_thresh1 += x
                 total_score_thresh2 += db_eval_boundary(single_pred, single_label, bound_th=2)[0]
                 total_score_thresh4 += db_eval_boundary(single_pred, single_label, bound_th=4)[0]
                 total_score_thresh1_nms += db_eval_boundary(single_pred_thin, single_label, bound_th=1)[0]
@@ -975,7 +975,7 @@ def test_seg(args, writer):
               normalize])
     # t.extend([transforms.RandomHorizontalFlip(),
     #           transforms.ToTensor()])
-    # Is there any reason for transforms in validation code?
+    # Why are we forming an array of transforms here?
     test_loader = torch.utils.data.DataLoader(
         CityscapesSingleInstanceDataset(data_dir, 'val', out_dir=args.out_dir),
         batch_size=batch_size, shuffle=False, num_workers=num_workers,
