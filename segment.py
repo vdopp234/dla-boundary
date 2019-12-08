@@ -798,6 +798,9 @@ def test_boundary(eval_data_loader, model, num_classes,
     total_score_thresh1 = 0
     total_score_thresh2 = 0
     total_score_thresh4 = 0
+    total_score_thresh1_nms = 0
+    total_score_thresh2_nms = 0
+    total_score_thresh4_nms = 0
     total_imgs = 0
     for iter, (image, label_seg, label_boundary, _) in enumerate(eval_data_loader):
         data_time.update(time.time() - end)
@@ -818,14 +821,17 @@ def test_boundary(eval_data_loader, model, num_classes,
                 single_label = label[i]
                 single_image = input_np[i]
                 single_pred_thin = bwmorph_thin(image=single_pred)
-                imwrite(os.path.join(output_dir, "input_img{}.png".format(i)), single_image)
+                # imwrite(os.path.join(output_dir, "input_img{}.png".format(i)), single_image.astype(np.uint8)*255)
                 imwrite(os.path.join(output_dir, "gt_img{}.png".format(i)), single_label.astype(np.uint8)*255)
                 imwrite(os.path.join(output_dir, "pred_img{}.png".format(i)), single_pred.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "pred_img{}_thin.png".format(i)), single_pred_thin)
+                imwrite(os.path.join(output_dir, "pred_img{}_thin.png".format(i)), single_pred_thin.astype(np.uint8)*255)
                 x = db_eval_boundary(single_pred, single_label, bound_th=1)[0]
                 total_score_thresh1 += db_eval_boundary(single_pred, single_label, bound_th=1)[0]
                 total_score_thresh2 += db_eval_boundary(single_pred, single_label, bound_th=2)[0]
                 total_score_thresh4 += db_eval_boundary(single_pred, single_label, bound_th=4)[0]
+                total_score_thresh1_nms += db_eval_boundary(single_pred_thin, single_label, bound_th=1)[0]
+                total_score_thresh2_nms += db_eval_boundary(single_pred_thin, single_label, bound_th=2)[0]
+                total_score_thresh4_nms += db_eval_boundary(single_pred_thin, single_label, bound_th=4)[0]
                 boundary_score += x
             print('===> mAP {mAP:.3f}'.format(mAP=boundary_score/batch_size))
         end = time.time()
@@ -839,15 +845,26 @@ def test_boundary(eval_data_loader, model, num_classes,
     average_score1 = total_score_thresh1/total_imgs
     average_score2 = total_score_thresh2/total_imgs
     average_score4 = total_score_thresh4/total_imgs
-    f = open(os.path.join(output_dir, 'eval_thresh1.txt'), 'w')
-    f.write(str(average_score1) + "\n")
-    f.close()
-    f = open(os.path.join(output_dir, 'eval_thresh2.txt'), 'w')
-    f.write(str(average_score2) + "\n")
-    f.close()
-    f = open(os.path.join(output_dir, 'eval_thresh4.txt'), 'w')
-    f.write(str(average_score4) + "\n")
-    f.close()
+    average_score1_nms = total_score_thresh1_nms / total_imgs
+    average_score2_nms = total_score_thresh2_nms / total_imgs
+    average_score4_nms = total_score_thresh4_nms / total_imgs
+    with open(os.path.join(output_dir, 'eval_thresh1.txt'), 'w') as f:
+        f.write(str(average_score1) + "\n")
+
+    with open(os.path.join(output_dir, 'eval_thresh2.txt'), 'w') as f:
+        f.write(str(average_score2) + "\n")
+
+    with open(os.path.join(output_dir, 'eval_thresh4.txt'), 'w') as f:
+        f.write(str(average_score4) + "\n")
+
+    with open(os.path.join(output_dir, 'eval_thresh1_nms.txt'), 'w') as f:
+        f.write(str(average_score1_nms) + "\n")
+
+    with open(os.path.join(output_dir, 'eval_thresh2_nms.txt'), 'w') as f:
+        f.write(str(average_score2_nms) + "\n")
+
+    with open(os.path.join(output_dir, 'eval_thresh4_nms.txt'), 'w') as f:
+        f.write(str(average_score4_nms) + "\n")
 
 
 def resize_4d_tensor(tensor, width, height):
