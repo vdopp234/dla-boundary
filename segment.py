@@ -262,6 +262,9 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
     model.eval()
 
     end = time.time()
+    batch_size = 16
+    total_score = 0
+    num_examples = 0
     for i, (input, target_seg, target_boundary, _) in enumerate(val_loader):
         if type(criterion) in [torch.nn.modules.loss.L1Loss,
                                torch.nn.modules.loss.MSELoss]:
@@ -272,20 +275,34 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
             writer.add_image('validate/image', input[0].numpy(), step)
 
         input = input.cuda()
-        target = target_boundary.cuda(non_blocking=True)
+        target = target_boundary.cuda(non_blocking=True)  # For Loss Computation
         with torch.no_grad():
+
             input_var = torch.autograd.Variable(input)
             target_var = torch.autograd.Variable(target)
-
             # compute output
             output = model(input_var)[0]
             loss = criterion(output, target_var)
-
-            # measure accuracy and record loss
             losses.update(loss.data.item())
-            if eval_score is not None:
-                score.update(eval_score(output, target_var), input.size(0))
+            _, pred = torch.max(output, 1)  # Argmax along channel dimension
 
+            # Convert Tensors to Numpy
+            input_np = input.detach().cpu().numpy()
+            pred_np = pred.cpu().data.numpy()
+            label_np = target_boundary.numpy()
+
+            # Initialize other vars
+            batch_score = 0
+            for i in range(batch_size):
+                single_pred = pred_np[i]
+                single_label = label_np[i]
+                # single_image = np.moveaxis(input_np[i], 0, 2)  # No visualization in validation
+                single_pred_thin = bwmorph_thin(image=single_pred)  # Edge thinning
+                x = db_eval_boundary(fg_boundary=single_pred_thin, gt_boundary=single_label, bound_th=2)[0]
+                batch_score += x
+                total_score += x
+                num_examples += 1
+            # print('===> mAP {mAP:.3f}'.format(mAP=batch_score/batch_size))
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -298,7 +315,7 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
                 writer.add_scalar('validate/score', score.val, step)
 
                 prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
-                prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
+                # prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
 
                 writer.add_image('validate/gt', np.expand_dims(target[0].cpu().numpy(), axis=0), step)
                 writer.add_image('validate/predicted', np.expand_dims(prediction[0], axis=0), step)
@@ -308,9 +325,9 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                       'Score {score.val:.3f} ({score.avg:.3f})'.format(
                         i, len(val_loader), batch_time=batch_time, loss=losses,
-                        score=score), flush=True)
+                        score=batch_score/batch_size), flush=True)
 
-    print(' * Score {top1.avg:.3f}'.format(top1=score))
+    print(' * Score {top1.avg:.3f}'.format(top1=total_score/num_examples))
 
     return score.avg
 
