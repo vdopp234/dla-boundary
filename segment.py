@@ -837,9 +837,9 @@ def test_boundary(eval_data_loader, model, num_classes,
             for i in range(batch_size):
                 single_pred = pred[i]
                 single_label = label[i]
-                single_image = np.moveaxis(input_np[i], 0, 2)
+                single_image = np.moveaxis(input_np[i], 0, 2) * 255
                 single_pred_thin = bwmorph_thin(image=single_pred)  # Edge thinning
-                imwrite(os.path.join(output_dir, "output_visualization/input_img_batch{}_img{}.png".format(iter, i)), single_image.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/input_img_batch{}_img{}.png".format(iter, i)), single_image.astype(np.uint8))
                 imwrite(os.path.join(output_dir, "output_visualization/gt_img_batch{}_img{}.png".format(iter, i)), single_label.astype(np.uint8)*255)
                 imwrite(os.path.join(output_dir, "output_visualization/pred_img_batch{}_img{}.png".format(iter, i)), single_pred.astype(np.uint8)*255)
                 imwrite(os.path.join(output_dir, "output_visualization/pred_img_batch{}_img{}_thin.png".format(iter, i)), single_pred_thin.astype(np.uint8)*255)

@@ -15,6 +15,19 @@ def set_bn(bn):
     dla.BatchNorm = bn
 
 
+class ResizeConv(nn.Module):
+    def __init__(self, up_factor, in_channels, out_channels, kernel_size, mode='bilinear'):
+        super(ResizeConv, self).__init__()
+        self.upsample = nn.Upsample(scale_factor=up_factor, mode=mode)
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+                              kernel_size=kernel_size)
+
+    def forward(self, x):
+        x = self.upsample(x)
+        x = self.conv(x)
+        return x
+
+
 class Identity(nn.Module):
     def __init__(self):
         super(Identity, self).__init__()
@@ -53,10 +66,12 @@ class IDAUp(nn.Module):
             if f == 1:
                 up = Identity()
             else:
-                up = nn.ConvTranspose2d(
-                    out_dim, out_dim, f * 2, stride=f, padding=f // 2,
-                    output_padding=0, groups=out_dim, bias=False)
-                fill_up_weights(up)
+                up = ResizeConv(in_channels=out_dim, out_channels=out_dim, kernel_size=f*2, up_factor=f)
+                fill_up_weights(up.conv)
+                # up = nn.ConvTranspose2d(
+                #     out_dim, out_dim, f * 2, stride=f, padding=f // 2,
+                #     output_padding=0, groups=out_dim, bias=False)
+                # fill_up_weights(up)
             setattr(self, 'proj_' + str(i), proj)
             setattr(self, 'up_' + str(i), up)
 
