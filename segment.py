@@ -262,7 +262,7 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
     model.eval()
 
     end = time.time()
-    batch_size = 16
+
     total_score = 0
     num_examples = 0
     for i, (input, target_seg, target_boundary, _) in enumerate(val_loader):
@@ -276,6 +276,7 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
 
         input = input.cuda()
         target = target_boundary.cuda(non_blocking=True)  # For Loss Computation
+        batch_size = input.shape[0]
         with torch.no_grad():
 
             input_var = torch.autograd.Variable(input)
@@ -302,7 +303,7 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
                 batch_score += x
                 total_score += x
                 num_examples += 1
-            # print('===> mAP {mAP:.3f}'.format(mAP=batch_score/batch_size))
+            print('===> Score {mAP:.3f}'.format(mAP=batch_score/batch_size))
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -310,9 +311,9 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
             if i % print_freq == 0:
                 # save_output_images()
                 # imwrite("./validation_output_visualization/validation_img{}".format(i), output.cpu().numpy().argmax(axis=1))
-                writer.add_scalar('validate/loss', losses.avg, step)
-                writer.add_scalar('validate/score_avg', score.avg, step)
-                writer.add_scalar('validate/score', score.val, step)
+                writer.add_scalar('validate/loss', losses.avg, step)  # Writes Tensorboard Logs
+                # writer.add_scalar('validate/score_avg', score.avg, step)
+                writer.add_scalar('validate/score', batch_score/batch_size, step)
 
                 prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
                 # prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
@@ -323,13 +324,13 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
                 print('Test: [{0}/{1}]\t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                      'Score {score.val:.3f} ({score.avg:.3f})'.format(
+                      'Score {score:.3f} ({score:.3f})'.format(
                         i, len(val_loader), batch_time=batch_time, loss=losses,
                         score=batch_score/batch_size), flush=True)
 
-    print(' * Score {top1.avg:.3f}'.format(top1=total_score/num_examples))
+    print(' * Score {top1:.3f}'.format(top1=total_score/num_examples))
 
-    return score.avg
+    return total_score/num_examples
 
 
 class AverageMeter(object):
@@ -365,10 +366,10 @@ def accuracy(output, target):
     # return score.data[0]
 
 
-def train_bce(train_loader, model, criterion, optimizer, epoch, writer,
+def train_boundary(train_loader, model, criterion, optimizer, epoch, writer,
           eval_score=None, print_freq=10):
     """
-    Trains boundary-detection model using BCE loss for one epoch
+    Trains boundary-detection model using NLLloss for one epoch
     :param train_loader: Train Dataset Dataloader
     :param model: DLA_Up Model
     :param criterion: NLLLoss2D
@@ -657,7 +658,7 @@ def train(args, writer):
             train_seg(train_loader, model, criterion, optimizer, epoch, writer,
                   eval_score=accuracy)
         elif args.boundary_detection:
-            train_bce(train_loader, model, criterion, optimizer, epoch, writer,
+            train_boundary(train_loader, model, criterion, optimizer, epoch, writer,
                   eval_score=accuracy)
         else:
             raise ValueError("Must be training either a segmentation model or a boundary detection model")
@@ -838,10 +839,10 @@ def test_boundary(eval_data_loader, model, num_classes,
                 single_label = label[i]
                 single_image = np.moveaxis(input_np[i], 0, 2)
                 single_pred_thin = bwmorph_thin(image=single_pred)  # Edge thinning
-                imwrite(os.path.join(output_dir, "output_visualization/input_img{}.png".format(iter * batch_size + i)), single_image.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "output_visualization/gt_img{}.png".format(iter * batch_size + i)), single_label.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "output_visualization/pred_img{}.png".format(iter * batch_size + i)), single_pred.astype(np.uint8)*255)
-                imwrite(os.path.join(output_dir, "output_visualization/pred_img{}_thin.png".format(iter * batch_size + i)), single_pred_thin.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/input_img_batch{}_img{}.png".format(iter, i)), single_image.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/gt_img_batch{}_img{}.png".format(iter, i)), single_label.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/pred_img_batch{}_img{}.png".format(iter, i)), single_pred.astype(np.uint8)*255)
+                imwrite(os.path.join(output_dir, "output_visualization/pred_img_batch{}_img{}_thin.png".format(iter, i)), single_pred_thin.astype(np.uint8)*255)
                 x = db_eval_boundary(single_pred, single_label, bound_th=1)[0]
                 total_score_thresh1 += x
                 total_score_thresh2 += db_eval_boundary(single_pred, single_label, bound_th=2)[0]
