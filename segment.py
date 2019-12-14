@@ -312,8 +312,8 @@ def validate_boundary(val_loader, model, criterion, epoch, writer, eval_score=No
                 # save_output_images()
                 # imwrite("./validation_output_visualization/validation_img{}".format(i), output.cpu().numpy().argmax(axis=1))
                 writer.add_scalar('validate/loss', losses.avg, step)  # Writes Tensorboard Logs
-                writer.add_scalar('validate/score_avg', score.avg, step)
-                writer.add_scalar('validate/score', score.val, step)
+                # writer.add_scalar('validate/score_avg', score.avg, step)
+                writer.add_scalar('validate/score', batch_score/batch_size, step)
 
                 prediction = np.argmax(output.detach().cpu().numpy(), axis=1)
                 # prob = torch.nn.functional.softmax(output.detach().cpu(), dim=1).numpy()
