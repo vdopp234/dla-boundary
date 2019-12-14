@@ -19,8 +19,9 @@ class ResizeConv(nn.Module):
     def __init__(self, up_factor, in_channels, out_channels, kernel_size, mode='bilinear'):
         super(ResizeConv, self).__init__()
         self.upsample = nn.Upsample(scale_factor=up_factor, mode=mode)
+        # print("Kernel Size", kernel_size)
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
-                              kernel_size=kernel_size)
+                              kernel_size=kernel_size, padding=kernel_size//2)
 
     def forward(self, x):
         x = self.upsample(x)
@@ -66,12 +67,12 @@ class IDAUp(nn.Module):
             if f == 1:
                 up = Identity()
             else:
-                up = ResizeConv(in_channels=out_dim, out_channels=out_dim, kernel_size=f*2, up_factor=f)
+                up = ResizeConv(in_channels=out_dim, out_channels=out_dim, kernel_size=f*2+1, up_factor=f)
                 fill_up_weights(up.conv)
-                # up = nn.ConvTranspose2d(
-                #     out_dim, out_dim, f * 2, stride=f, padding=f // 2,
-                #     output_padding=0, groups=out_dim, bias=False)
-                # fill_up_weights(up)
+                #up = nn.ConvTranspose2d(
+                #   in_channels=out_dim, out_channels=out_dim, kernel_size=f * 2, stride=f, padding=f // 2,
+                #   output_padding=0, groups=out_dim, bias=False)
+                #fill_up_weights(up)
             setattr(self, 'proj_' + str(i), proj)
             setattr(self, 'up_' + str(i), up)
 
@@ -99,6 +100,9 @@ class IDAUp(nn.Module):
         for i, l in enumerate(layers):
             upsample = getattr(self, 'up_' + str(i))
             project = getattr(self, 'proj_' + str(i))
+            #x = project(l)
+            #y = upsample(x)
+            #print("Iteration {} -- Upsample Shape: ".format(i), y.shape)
             layers[i] = upsample(project(l))
         x = layers[0]
         y = []
